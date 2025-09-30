@@ -3,9 +3,14 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 #include <std_msgs/msg/int8.h>
+#include <std_msgs/msg/int32.h>
 
 rcl_subscription_t subscriber;
 std_msgs__msg__Int8 msg;
+
+rcl_publisher_t publisher;
+std_msgs__msg__Int32 pub_msg;
+rcl_timer_t timer;
 
 rclc_executor_t executor;
 rclc_support_t support;
@@ -24,6 +29,10 @@ rcl_node_t node;
 #define ENB 32  // PWM pin
 
 #define MOTOR_SPEED 200   // 0-255 PWM speed (≈80% of max)
+
+//Ultrasonic Sensor Pin Configuration
+#define TRIG_PIN 18
+#define ECHO_PIN 36
 
 void stopMotors() {
   digitalWrite(IN1, LOW);
@@ -104,6 +113,35 @@ void subscription_callback(const void * msgin) {
   }
 }
 
+//Function to read ultrasonic sensor distance in cm
+long getDistance() {
+  // Trigger the sensor
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  // Read the echo pulse
+  long duration = pulseIn(ECHO_PIN, HIGH);
+
+  // Calculate distance in centimeters
+  // The speed of sound is 343 m/s, or 0.0343 cm/µs.
+  // The pulse travels to the object and back, so we divide by 2.
+  return duration * 0.0343 / 2;
+}
+
+//Timer callback for publishing sensor data
+void timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
+  RCLC_UNUSED(last_call_time);
+  if (timer != NULL) {
+    pub_msg.data = getDistance();
+    rcl_publish(&publisher, &pub_msg, NULL);
+    Serial.print("Published distance (cm): ");
+    Serial.println(pub_msg.data);
+  }
+}
+
 // ---------------- Setup ----------------
 void setup() {
   Serial.begin(115200);
@@ -126,10 +164,27 @@ void setup() {
     "cmd_vel"
   );
 
-  // Executor
-  rclc_executor_init(&executor, &support.context, 1, &allocator);
-  rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA);
+  //Create publisher
+  rclc_publisher_init_default(
+    &publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    "sensor_reading"
+  );
 
+  //timer to trigger the publisher every 200ms
+  const unsigned int timer_period = 200;
+  rclc_timer_init_default(
+    &timer,
+    &support,
+    RCL_MS_TO_NS(timer_period),
+    timer_callback
+  );
+
+  // Executor
+  rclc_executor_init(&executor, &support.context, 2, &allocator);
+  rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA);
+  rclc_executor_add_timer(&executor, &timer);
   // ---------------- Motor Pins Setup ----------------
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
