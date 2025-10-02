@@ -17,18 +17,14 @@ rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 
-// ---------------- Motor Pin Configuration ----------------
+// ---------------- Motor Pin Configuration  ----------------
 // Left motor
 #define IN1 14
 #define IN2 27
-#define ENA 26  // PWM pin
 
 // Right motor
-#define IN3 25
-#define IN4 33
-#define ENB 32  // PWM pin
-
-#define MOTOR_SPEED 200   // 0-255 PWM speed (≈80% of max)
+#define IN3 26
+#define IN4 25
 
 //Ultrasonic Sensor Pin Configuration
 #define TRIG_PIN 18
@@ -39,8 +35,6 @@ void stopMotors() {
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, LOW);
-  ledcWrite(0, 0);
-  ledcWrite(1, 0);
 }
 
 void moveForward() {
@@ -48,8 +42,6 @@ void moveForward() {
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, HIGH);
   digitalWrite(IN4, LOW);
-  ledcWrite(0, MOTOR_SPEED);
-  ledcWrite(1, MOTOR_SPEED);
 }
 
 void moveBackward() {
@@ -57,8 +49,6 @@ void moveBackward() {
   digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, HIGH);
-  ledcWrite(0, MOTOR_SPEED);
-  ledcWrite(1, MOTOR_SPEED);
 }
 
 void turnLeft() {
@@ -67,8 +57,6 @@ void turnLeft() {
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, HIGH);
   digitalWrite(IN4, LOW);
-  ledcWrite(0, 0);
-  ledcWrite(1, MOTOR_SPEED);
 }
 
 void turnRight() {
@@ -77,8 +65,6 @@ void turnRight() {
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, LOW);
-  ledcWrite(0, MOTOR_SPEED);
-  ledcWrite(1, 0);
 }
 
 // ---------------- ROS2 Subscription Callback ----------------
@@ -148,8 +134,8 @@ void setup() {
   delay(2000);
 
   // micro-ROS transport init (Serial)
-  set_microros_serial_transports(Serial);
-
+  //set_microros_serial_transports(Serial);
+  set_microros_transports();
   allocator = rcl_get_default_allocator();
   rclc_support_init(&support, 0, NULL, &allocator);
 
@@ -185,17 +171,16 @@ void setup() {
   rclc_executor_init(&executor, &support.context, 2, &allocator);
   rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA);
   rclc_executor_add_timer(&executor, &timer);
-  // ---------------- Motor Pins Setup ----------------
+  
+  // ---------------- Motor Pins Setup  ----------------
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
 
-  // PWM channels for motor speed
-  ledcSetup(0, 1000, 8); // channel 0, freq=1kHz, resolution=8-bit
-  ledcAttachPin(ENA, 0);
-  ledcSetup(1, 1000, 8);
-  ledcAttachPin(ENB, 1);
+  // PWM setup has been removed as per the request.
+  // Make sure the ENA and ENB pins on your L298N motor driver
+  // are connected to a 5V source (often with a jumper).
 
   stopMotors();  // ensure motors are stopped at start
 
