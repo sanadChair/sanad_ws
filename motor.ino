@@ -172,13 +172,12 @@ void setup() {
   rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA);
   rclc_executor_add_timer(&executor, &timer);
   
-  // ---------------- Motor Pins Setup  ----------------
+  // ---------------- Motor Pins Setup (Updated) ----------------
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
 
-  // PWM setup has been removed as per the request.
   // Make sure the ENA and ENB pins on your L298N motor driver
   // are connected to a 5V source (often with a jumper).
 
