@@ -1,4 +1,4 @@
-# Sanad Workspace (sanad_ws)
+# Part 1: Sanad Workspace (sanad_ws)
 
 A ROS2 workspace containing the `sanad_interface_pkg` package for robot control interfaces.
 
@@ -80,7 +80,7 @@ ros2 run sanad_interface_pkg <your_node_executable_name>
 
 
 
-# Sanad Chair Control System
+# Part 2: Sanad Chair Control System
 
 This repository contains the firmware for the **Sanad Chair**, a smart chair controlled remotely via **micro-ROS** over Wi-Fi. The system is designed for an **ESP32** or similar microcontroller, utilizing the **PlatformIO** development ecosystem.
 
@@ -160,7 +160,7 @@ The Sanad Chair system is built around several decoupled components, communicati
 1. The system starts in `main.cpp` by creating a `SanadChair` instance.
 2. `chair->begin(...)` is called, which initializes all hardware interfaces, the Wi-Fi connection, and the **micro-ROS node**.
 3. The `loop()` function repeatedly calls `chair->update()`, which executes the **ROS executor's spin function** (`_rosNode->spin()`).
-4. **Control Input:** When a new movement command (e.g., an integer) arrives on the ROS subscriber topic, the static `subscriptionCallback` in `RosRobotNode` translates the message into a motor action (e.g., `_l298n->moveForward()`).
+4. **Control Input:** When a new movement command (e.g., an integer) arrives on the ROS subscriber topic (e.g., /cmd_vel), the static subscription Callback in `RosRobotNode` translates the message into a motor action (e.g., `_l298n->moveForward()`).
 5. **Sensor Output:** A ROS Timer periodically triggers the static `timerCallback`, which reads the distance using `_ultrasonic->getDistance()` and **publishes** the data to the ROS network.
 
 
