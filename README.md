@@ -1,102 +1,172 @@
-# Sanad Workspace (sanad_ws)
+````markdown
+# micro-ROS on Host Setup Guide 
 
-A ROS2 workspace containing the `sanad_interface_pkg` package for robot control interfaces.
+This guide provides step-by-step instructions for setting up a micro-ROS workspace, building the tools, and running a sample application on your host machine. This allows you to develop and test micro-ROS applications without needing physical hardware.
 
-## Prerequisites
+---
 
-Before cloning this project, you need to create a GitHub Personal Access Token to authenticate.
+##  1. Setup the micro-ROS Workspace
 
-### Creating a GitHub Personal Access Token
+First, we'll create a dedicated workspace, download the necessary setup tools, and build them.
 
-1. Log in to your GitHub account
-2. Click on your profile picture (top right) → **Settings**
-3. Scroll down and click **Developer settings** (left sidebar, bottom)
-4. Click **Personal access tokens** → **Tokens (classic)**
-5. Click **Generate new token** → **Generate new token (classic)**
-6. Give your token a descriptive name (e.g., "ROS2 Sanad Workspace")
-7. Set expiration date (recommended: 90 days or custom)
-8. Select scopes: Check **repo** (this gives full control of private repositories)
-9. Scroll down and click **Generate token**
-10. **IMPORTANT**: Copy the token immediately and save it securely (you won't be able to see it again)
+### Source ROS 2
+Ensure your ROS 2 environment is sourced. Replace `$ROS_DISTRO` with your installed ROS 2 version (e.g., `humble`, `iron`).
+```bash
+# Source the ROS 2 installation
+source /opt/ros/$ROS_DISTRO/setup.bash
+````
 
-## Installation
+### Create Workspace and Download Tools
 
-### 1. Clone the Repository
+Create a directory for your workspace and clone the `micro_ros_setup` repository.
 
 ```bash
-cd ~
-git clone https://github.com/sanadChair/ROS.git
-cd sanad_ws
+# Create a workspace and download the micro-ROS tools
+mkdir microros_ws
+cd microros_ws
+git clone -b $ROS_DISTRO [https://github.com/micro-ROS/micro_ros_setup.git](https://github.com/micro-ROS/micro_ros_setup.git) src/micro_ros_setup
 ```
 
-When prompted for credentials:
-- **Username**: Your GitHub username
-- **Password**: Paste your Personal Access Token (not your GitHub password)
+### Install Dependencies
 
-
-
-### 2. Build the Workspace
+Update your package lists and use `rosdep` to install all required dependencies.
 
 ```bash
-cd ~/sanad_ws
-colcon build --symlink-install # useful for faster iteration on Python packages.
-source install/setup.bash
+# Update dependencies using rosdep
+sudo apt update && rosdep update
+rosdep install --from-paths src --ignore-src -y
+
+# Install pip
+sudo apt-get install python3-pip
 ```
-This command will create the build/, install/, and log/ directories.
 
+### Build and Source the Tools
 
-## Running the Packages
+Build the packages in the workspace and source the new setup file to make them available in your terminal.
 
-### Running the Keyboard Teleop Node
-
-1. Source the workspace:
 ```bash
-source ~/sanad_ws/install/setup.bash
+# Build micro-ROS tools and source them
+colcon build
+source install/local_setup.bash
 ```
 
-2. Run the node:
+>  **Success\!** You now have a workspace with a ready-to-use micro-ROS build system.
+
+-----
+
+##  2. Understanding the Build System Workflow
+
+The build system simplifies the process of developing for micro-ROS with a four-step procedure:
+
+1.  **Create step**: Downloads the required source code, cross-compilation toolchains, and a collection of ready-to-use micro-ROS apps for a specific hardware platform.
+2.  **Configure step**: Allows you to select which app to compile and configure settings like transport protocol and agent connection details (IP address, port, etc.).
+3.  **Build step**: Cross-compiles the source code to generate platform-specific binaries.
+4.  **Flash step**: Flashes the generated binaries onto the target hardware's memory.
+
+-----
+
+##  3. Create and Build the Firmware
+
+Now, let's use the build system to prepare our application firmware.
+
+### Create the Firmware Workspace
+
+This command downloads the source code and tools needed for your target platform. In this case, the target is the `host` machine itself.
+
 ```bash
-ros2 run sanad_interface_pkg <your_node_executable_name>
+# Create firmware step
+ros2 run micro_ros_setup create_firmware_ws.sh host
 ```
 
+After running this, a new `firmware` directory will appear in your workspace. Inside `firmware/src/uros/micro-ROS-demos/rclc`, you'll find example applications.
 
+### The `ping_pong` Example
 
-## Development
+For this tutorial, we will use the `ping_pong` application. This example demonstrates a micro-ROS node that uses a publisher/subscriber pair to communicate.
 
-### Adding New Nodes
+The node sends a `ping` message. If an external ROS 2 node sends a `fake_ping` message, the micro-ROS node receives it and responds with a `pong` message.
 
-1. Create your node in `src/sanad_interface_pkg/sanad_interface_pkg/`
-2. Make it executable: `chmod +x your_node.py`
-3. Add entry point in `setup.py`
-4. Rebuild: `colcon build --packages-select sanad_interface_pkg`
+### Build the Firmware
 
-### Contributing
+Now, we compile the firmware.
 
-1. Create a new branch: `git checkout -b feature/your-feature`
-2. Make your changes
-3. Commit: `git commit -am 'Add new feature'`
-4. Push: `git push origin feature/your-feature`
-5. Create a Pull Request
+> **Note:** Because we are compiling for the host machine and not cross-compiling for different hardware, the **Configure step** is not needed and can be skipped.
 
-## Troubleshooting
-
-### Permission Denied when Running Node
 ```bash
-chmod +x ~/sanad_ws/src/sanad_interface_pkg/sanad_interface_pkg/keyboard_teleop.py
+# Build step
+ros2 run micro_ros_setup build_firmware.sh
+source install/local_setup.bash
 ```
 
-### Node Not Found
-Make sure you've sourced the workspace:
+-----
+
+##  4. Create and Build the micro-ROS Agent
+
+The micro-ROS agent acts as a bridge, connecting your micro-ROS application to the main ROS 2 network (DDS).
+
+### Create the Agent Workspace
+
+Download the agent packages using the setup script.
+
 ```bash
-source ~/sanad_ws/install/setup.bash
+# Download micro-ROS-Agent packages
+ros2 run micro_ros_setup create_agent_ws.sh
 ```
 
-### Authentication Failed (Clone)
-- Ensure you're using your Personal Access Token, not your GitHub password
-- Check that your token has `repo` scope enabled
-- Verify the token hasn't expired
+### Build and Source the Agent
 
+Build the agent packages and source the installation.
 
-## Acknowledgments
+```bash
+# Build step
+ros2 run micro_ros_setup build_agent.sh
+source install/local_setup.bash
+```
 
-Built with ROS2 for robotics control and teleoperation.
+-----
+
+##  5. Running the Application
+
+You're all set\! Let's run the agent and the application to see them communicate.
+
+### Step 1: Run the micro-ROS Agent
+
+Open a new terminal and run the following command to start the agent. The agent will listen for connections from micro-ROS clients on UDP port 8888.
+
+```bash
+# Run a micro-ROS agent
+ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
+```
+
+### Step 2: Run the micro-ROS App
+
+Open a **second terminal**. Navigate to your workspace, source the environment, and run the `ping_pong` application you built earlier.
+
+```bash
+# Navigate to your workspace
+cd ~/microros_ws
+
+# Source the environment
+source install/local_setup.bash
+
+# Run the ping_pong app (the exact command might vary)
+ros2 run micro_ros_demos_rclc ping_pong
+```
+
+You should now see output in both terminals, indicating that the `ping_pong` app has successfully connected to the agent and is communicating with the ROS 2 network.
+
+-----
+
+## 💡 Optional(not optional): Add to `.bashrc`
+
+To avoid sourcing the setup files in every new terminal, you can add them to your `.bashrc` file.
+
+```bash
+echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc
+echo "source ~/microros_ws/install/local_setup.bash" >> ~/.bashrc
+```
+
+You will need to restart your terminal or run `source ~/.bashrc` for the changes to take effect.
+
+```
+```
