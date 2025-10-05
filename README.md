@@ -82,7 +82,7 @@ ros2 run sanad_interface_pkg <your_node_executable_name>
 
 # Sanad Chair Control System
 
-This repository contains the firmware for the **Sanad Chair**, an embedded mobile robot or smart chair controlled remotely via **micro-ROS** over Wi-Fi. The system is designed for an **ESP32** or similar microcontroller, utilizing the **PlatformIO** development ecosystem.
+This repository contains the firmware for the **Sanad Chair**, a smart chair controlled remotely via **micro-ROS** over Wi-Fi. The system is designed for an **ESP32** or similar microcontroller, utilizing the **PlatformIO** development ecosystem.
 
 ## 🗃️ Project Structure
 
