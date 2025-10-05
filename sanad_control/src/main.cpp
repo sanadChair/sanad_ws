@@ -1,18 +1,28 @@
 #include <Arduino.h>
+#include "sanadChair.h"
+#include "config.h"
 
-// put function declarations here:
-int myFunction(int, int);
+
+SanadChair* chair = nullptr;
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  Serial.begin(115200);
+  delay(2000);
+  
+  // Create Sanad Chair instance with pin configuration
+  chair = new SanadChair();
+  
+  // Initialize the chair with WiFi and ROS settings
+  if (!chair->begin(WIFI_SSID, WIFI_PASSWORD, AGENT_IP, AGENT_PORT)) {
+    Serial.println("FATAL ERROR: Failed to initialize Sanad Chair!");
+    while(1) {
+      delay(1000); // Halt execution
+    }
+  }
 }
+
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
-
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+  // Update the chair - this handles all ROS communication
+  chair->update();
 }

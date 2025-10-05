@@ -15,3 +15,10 @@
 #define TRIG_PIN 18
 #define ECHO_PIN 36
 
+// ---------------- WiFi and ROS Agent Configuration ----------------
+#define WIFI_SSID "tel"
+#define WIFI_PASSWORD "01066158787qwert"
+#define AGENT_IP "192.168.1.13"
+#define AGENT_PORT 8888
+
+
