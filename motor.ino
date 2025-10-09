@@ -2,26 +2,39 @@
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
-#include <std_msgs/msg/int8.h>
-#include <std_msgs/msg/int32.h>
+
+// Include message types
+#include <std_msgs/msg/int8.h>      // For motor commands
+#include <std_msgs/msg/float32.h>   // For sensor data (Updated)
+#include <std_msgs/msg/u_int8.h>    // For servo angle (Added)
 
 // WiFi specific includes
 #include <WiFi.h>
 
-// ---------------- ROS2 Topic and Node Configuration ----------------
-rcl_subscription_t subscriber;
-std_msgs__msg__Int8 msg;
+// Servo specific include (Added)
+#include <ESP32Servo.h>
 
+// ---------------- ROS2 Topic and Node Configuration ----------------
+// Motor Subscriber
+rcl_subscription_t motor_subscriber;
+std_msgs__msg__Int8 motor_msg;
+
+// Servo Subscriber (Added)
+rcl_subscription_t servo_subscriber;
+std_msgs__msg__UInt8 servo_msg;
+
+// Sensor Publisher
 rcl_publisher_t publisher;
-std_msgs__msg__Int32 pub_msg;
+std_msgs__msg__Float32 pub_msg; // (Updated from Int32 to Float32)
 rcl_timer_t timer;
 
+// ROS2 Core Objects
 rclc_executor_t executor;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 
-// ---------------- Motor Pin Configuration ----------------
+// ---------------- Pin Configuration ----------------
 // Left motor
 #define IN1 14
 #define IN2 27
@@ -30,9 +43,13 @@ rcl_node_t node;
 #define IN3 26
 #define IN4 25
 
-// ---------------- Ultrasonic Sensor Pin Configuration ----------------
+// Ultrasonic Sensor
 #define TRIG_PIN 18
-#define ECHO_PIN 36
+#define ECHO_PIN 33 // (Updated from 36 to 33)
+
+// Servo Motor (Added)
+#define SERVO_PIN 32
+Servo my_servo;
 
 // ---------------- Motor Control Functions ----------------
 void stopMotors() {
@@ -57,7 +74,6 @@ void moveBackward() {
 }
 
 void turnLeft() {
-  // Left motor stop, right motor forward
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, HIGH);
@@ -65,16 +81,16 @@ void turnLeft() {
 }
 
 void turnRight() {
-  // Right motor stop, left motor forward
   digitalWrite(IN1, HIGH);
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, LOW);
 }
 
-// ---------------- ROS2 Subscription Callback ----------------
-// This function is called whenever a message is received on the "cmd_vel" topic.
-void subscription_callback(const void * msgin) {
+// ---------------- ROS2 Callbacks ----------------
+
+// Callback for motor commands on "/cmd_vel" topic
+void motor_subscription_callback(const void * msgin) {
   const std_msgs__msg__Int8 * msg = (const std_msgs__msg__Int8 *)msgin;
 
   switch(msg->data) {
@@ -99,44 +115,56 @@ void subscription_callback(const void * msgin) {
       turnRight();
       break;
     default:
-      Serial.print("Received unknown command: ");
+      Serial.print("Received unknown motor command: ");
       Serial.println(msg->data);
       stopMotors();
   }
 }
 
-// ---------------- Ultrasonic Sensor Function ----------------
-// Function to read ultrasonic sensor distance in cm with a timeout
-long getDistance() {
-  // Set a maximum timeout of 50ms (corresponding to about 8.5 meters, which is plenty)
-  const long timeout = 50000; // 50,000 microseconds = 50 milliseconds
+// Callback for servo angle on "/servo_angle" topic (Added)
+void servo_subscription_callback(const void * msgin) {
+    const std_msgs__msg__UInt8 * msg = (const std_msgs__msg__UInt8 *)msgin;
+    // The Servo library's write() function accepts an angle from 0 to 180.
+    int angle = msg->data;
+    if (angle >= 0 && angle <= 180) {
+        my_servo.write(angle);
+        Serial.print("Set servo angle to: ");
+        Serial.println(angle);
+    } else {
+        Serial.print("Received invalid servo angle: ");
+        Serial.println(angle);
+    }
+}
 
-  // Trigger the sensor
+// ---------------- Sensor Function ----------------
+
+// Function to read ultrasonic sensor distance in cm (returns float)
+float getDistance() {
+  const long timeout = 50000; // 50ms timeout
+
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
   digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
 
-  // Read the echo pulse with a specific timeout
   long duration = pulseIn(ECHO_PIN, HIGH, timeout);
 
-  // If duration is 0, it means either no object was detected or the sensor is disconnected.
-  // In either case, we can return 0 or a special value like -1 to indicate an error.
   if (duration == 0) {
-    return 0; // Or return -1; to signify an error/out of range
+    return 0.0; // Return 0.0 if out of range or error
   }
 
-  // Calculate distance in centimeters
-  return duration * 0.0343 / 2;
+  // Calculate distance in centimeters (as a float)
+  return duration * 0.0343 / 2.0;
 }
 
 // ---------------- ROS2 Timer Callback for Publishing ----------------
-// This function is called periodically by the timer to publish sensor data.
+
+// This function publishes the sensor data periodically
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
   if (timer != NULL) {
-    pub_msg.data = getDistance();
+    pub_msg.data = getDistance(); // Assigns the float value
     rcl_publish(&publisher, &pub_msg, NULL);
     Serial.print("Published distance (cm): ");
     Serial.println(pub_msg.data);
@@ -148,10 +176,9 @@ void setup() {
   Serial.begin(115200);
   delay(2000);
 
-  // --- IMPORTANT: CONFIGURE YOUR WIFI AND AGENT INFO HERE ---
+  // --- CONFIGURE YOUR WIFI AND AGENT INFO ---
   const char* ssid = "tel";
   const char* password = "01066158787qwert";
-  // IP address of the computer running the micro-ROS agent
   const char* agent_ip = "192.168.1.13";
   const uint16_t agent_port = 8888;
 
@@ -163,39 +190,45 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("");
-  Serial.println("WiFi connected");
+  Serial.println("\nWiFi connected");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  // Set the micro-ROS transport to use WiFi
   set_microros_wifi_transports((char*)ssid, (char*)password, (char*)agent_ip, agent_port);
-  delay(2000); // Wait for the transport to be set up
+  delay(2000);
 
   allocator = rcl_get_default_allocator();
   rclc_support_init(&support, 0, NULL, &allocator);
 
-  // Create node
+  // --- Create Node ---
   rclc_node_init_default(&node, "esp32_wifi_robot", "", &support);
 
-  // Create subscriber
+  // --- Create Motor Subscriber ---
   rclc_subscription_init_default(
-    &subscriber,
+    &motor_subscriber,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int8),
     "cmd_vel"
   );
 
-  // Create publisher
+  // --- Create Servo Subscriber (Added) ---
+  rclc_subscription_init_default(
+    &servo_subscriber,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8),
+    "servo_angle"
+  );
+
+  // --- Create Sensor Publisher ---
   rclc_publisher_init_default(
     &publisher,
     &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), // (Updated to Float32)
     "sensor_reading"
   );
 
-  // Create a timer to trigger the publisher every 200ms
-  const unsigned int timer_period = 200;
+  // --- Create Timer for Publisher ---
+  const unsigned int timer_period = 200; // ms
   rclc_timer_init_default(
     &timer,
     &support,
@@ -203,22 +236,27 @@ void setup() {
     timer_callback
   );
 
-  // Create executor
-  rclc_executor_init(&executor, &support.context, 2, &allocator);
-  rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA);
+  // --- Create Executor ---
+  // Increased from 2 to 3 to handle the new servo subscriber
+  rclc_executor_init(&executor, &support.context, 3, &allocator);
+  rclc_executor_add_subscription(&executor, &motor_subscriber, &motor_msg, &motor_subscription_callback, ON_NEW_DATA);
+  rclc_executor_add_subscription(&executor, &servo_subscriber, &servo_msg, &servo_subscription_callback, ON_NEW_DATA); // (Added)
   rclc_executor_add_timer(&executor, &timer);
   
-  // ---------------- Motor & Sensor Pins Setup ----------------
+  // --- Hardware Pins Setup ---
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
+  
+  my_servo.attach(SERVO_PIN); // Attach servo to its pin (Added)
+  my_servo.write(90);         // Initialize servo to a neutral position
 
-  stopMotors(); // ensure motors are stopped at start
+  stopMotors(); // Ensure motors are stopped at start
 
-  Serial.println("Micro-ROS WiFi Motor Node started!");
+  Serial.println("Micro-ROS WiFi Robot Node started!");
 }
 
 // ---------------- Loop Function ----------------
