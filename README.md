@@ -6,18 +6,30 @@ A ROS2 workspace containing the `sanad_interface_pkg` package for robot control 
 
 Before cloning this project, you need to create a GitHub Personal Access Token to authenticate.
 
-### Creating a GitHub Personal Access Token
+<details>
+<summary><b>  Creating a GitHub Personal Access Token</b></summary>
 
 1. Log in to your GitHub account
+
 2. Click on your profile picture (top right) → **Settings**
+
 3. Scroll down and click **Developer settings** (left sidebar, bottom)
+
 4. Click **Personal access tokens** → **Tokens (classic)**
+
 5. Click **Generate new token** → **Generate new token (classic)**
+
 6. Give your token a descriptive name (e.g., "ROS2 Sanad Workspace")
+
 7. Set expiration date (recommended: 90 days or custom)
+
 8. Select scopes: Check **repo** (this gives full control of private repositories)
+
 9. Scroll down and click **Generate token**
+
 10. **IMPORTANT**: Copy the token immediately and save it securely (you won't be able to see it again)
+
+</details>
 
 ## Installation
 
@@ -77,6 +89,12 @@ ros2 run sanad_interface_pkg <your_node_executable_name>
 4. Push: `git push origin feature/your-feature`
 5. Create a Pull Request
 
+### ⚙️ Sensor-to-Software Mapping Table
+| **Sensor / Input**                        | **ROS2 Node / Package**          | **Published Topics**                                                                             | **Msg Type**                        | **Rate (Hz)**                | **Processor**         | **Purpose / Notes**                                                                         |
+| ----------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------- | ---------------------------- | --------------------- | ------------------------------------------------------------------------------------------- |
+| **keyboard**            | `keyboard/sanad_interface_pkg`                    | `/cmd_vel`                                                                                          | `sensor_msgs/Int8`             |  _                     | _          | Publish keyboard commands throught Micro Ros agent to control sanad movement                     |
+                                             |
+
 # Part 2: Sanad Chair Control System
 
 This repository contains the firmware for the **Sanad Chair**, a smart chair controlled remotely via **micro-ROS** over Wi-Fi. The system is designed for an **ESP32** or similar microcontroller, utilizing the **PlatformIO** development ecosystem.
@@ -88,7 +106,6 @@ The project is organized using PlatformIO's standard structure, with custom libr
 ```
 sanad_control/
 ├── .pio/               # PlatformIO build files
-├── .vscode/            # VS Code configuration
 ├── include/            # Common header files (if any)
 ├── lib/                # Custom Libraries/Classes
 │   ├── Config/         # System configuration (pins, network settings)
