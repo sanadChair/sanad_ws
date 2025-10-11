@@ -1,0 +1,81 @@
+@startuml
+
+class L298N {
+  - driverPins[6] : uint8_t
+  - stateMotorA : int
+  - stateMotorB : int
+  - speed : int
+  --
+  + moveForward() : void
+  + moveBackward() : void
+  + rotateRight() : void
+  + rotateLeft() : void
+  + stop() : void
+  + initialMotors() : void
+  + setSpeed(newSpeed:int) : void
+  + getCurrentSpeed() : int
+}
+
+class UltrasonicSensor {
+  - trig_pin : uint8_t
+  - echo_pin : uint8_t
+  - TIMEOUT : long
+  --
+  + init() : void
+  + getDistance() : long
+}
+
+class RosRobotNode {
+  - _l298n : L298N*
+  - _ultrasonic : UltrasonicSensor*
+  - key_subscriber : rcl_subscription_t
+  - key_msg : std_msgs__msg__Int8
+  - ultra_publisher : rcl_publisher_t
+  - ultra_msg : std_msgs__msg__Int32
+  - _timer : rcl_timer_t
+  - _executor : rclc_executor_t
+  - _support : rclc_support_t
+  - _allocator : rcl_allocator_t
+  - _node : rcl_node_t
+  --
+  + RosRobotNode(l298n:L298N*, ultrasonic:UltrasonicSensor*)
+  + initWiFi(ssid:char*, password:char*, ip:char*, port:uint16_t) : bool
+  + initROS() : bool
+  + spin() : void
+  + destroy() : void
+  + subscriptionCallback(msgin:void*) : static void
+  + timerCallback(timer:rcl_timer_t*, last:int64_t) : static void
+}
+
+class SanadChair {
+  - _l298n : L298N*
+  - _ultrasonic : UltrasonicSensor*
+  - _rosNode : RosRobotNode*
+  - _initialized : bool
+  --
+  + SanadChair()
+  + ~SanadChair()
+  + begin(ssid:char*, password:char*, ip:char*, port:uint16_t) : bool
+  + update() : void
+  + getMotorController() : L298N*
+  + getSensor() : UltrasonicSensor*
+  + getRosNode() : RosRobotNode*
+}
+
+class Main {
+  --
+  + setup() : void
+  + loop() : void
+}
+
+SanadChair "1" *-- "1" L298N
+SanadChair "1" *-- "1" UltrasonicSensor
+SanadChair "1" *-- "1" RosRobotNode
+
+RosRobotNode --> L298N : controls
+RosRobotNode --> UltrasonicSensor : reads
+
+Main --> SanadChair : uses
+
+@enduml
+
