@@ -93,7 +93,6 @@ ros2 run sanad_interface_pkg <your_node_executable_name>
 | **Sensor / Input**                        | **ROS2 Node / Package**          | **Published Topics**                                                                             | **Msg Type**                        | **Rate (Hz)**                | **Processor**         | **Purpose / Notes**                                                                         |
 | ----------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------- | ---------------------------- | --------------------- | ------------------------------------------------------------------------------------------- |
 | **keyboard**            | `keyboard/sanad_interface_pkg`                    | `/cmd_vel`                                                                                          | `sensor_msgs/Int8`             |  _                     | _          | Publish keyboard commands throught Micro Ros agent to control sanad movement                     |
-                                             |
 
 # Part 2: Sanad Chair Control System
 
