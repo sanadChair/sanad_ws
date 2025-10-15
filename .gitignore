@@ -30,3 +30,5 @@ venv/
 
 # Windows Files
 Thumbs.db
+
+ROS.code-workspace
