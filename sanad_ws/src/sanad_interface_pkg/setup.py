@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'keyboard = sanad_interface_pkg.keyboard:main',
+            'keyboard_twist = sanad_interface_pkg.keyboard_twist:main'
         ],
     },
 )
