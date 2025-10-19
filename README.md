@@ -57,6 +57,13 @@ source install/setup.bash
 This command will create the build/, install/, and log/ directories.
 
 ## Running the Packages
+### Launching the Simulation
+
+To start the robot simulation in Gazebo (Ignition), run:
+
+```bash
+ros2 launch sanad_bringup sanad_gazebo.launch.xml
+```
 
 ### Running the Keyboard Teleop Node
 
@@ -69,7 +76,7 @@ source ~/sanad_ws/install/setup.bash
 2.Run the node:
 
 ```bash
-ros2 run sanad_interface_pkg <your_node_executable_name>
+ros2 run sanad_interface_pkg keyboard_twist 
 ```
 
 ## Development
