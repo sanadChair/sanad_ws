@@ -5,6 +5,7 @@
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="yousefkamel282@gmail.com">youssef</maintainer>
+  <maintainer email="mohmed.ayman11@gmail.com">zero</maintainer>
   <license>TODO: License declaration</license>
 
   <depend>rclpy</depend>
