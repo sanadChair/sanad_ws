@@ -12,7 +12,7 @@ find_package(ros_gz_sim REQUIRED)
 
 
 install(
-  DIRECTORY launch config
+  DIRECTORY launch config worlds
   DESTINATION share/${PROJECT_NAME}/
 )
 
