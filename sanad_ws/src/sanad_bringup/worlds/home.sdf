@@ -70,27 +70,27 @@
       <self_collide>false</self_collide>
     </model>
     <include>
-      <uri>file:///home/zero/.ignition/fuel/fuel.gazebosim.org/openrobotics/models/dining table/1</uri>
+      <uri>model://dining_table</uri>
       <name>DiningTable</name>
       <pose>2.23068 -0.092019 0 0 -0 0</pose>
     </include>
     <include>
-      <uri>file:///home/zero/.ignition/fuel/fuel.gazebosim.org/openrobotics/models/dining chair/1</uri>
+      <uri>model://dining_chair</uri>
       <name>DiningChair</name>
       <pose>1.75875 0.388854 0 0 -0 1.55554</pose>
     </include>
     <include>
-      <uri>file:///home/zero/.ignition/fuel/fuel.gazebosim.org/openrobotics/models/dining chair/1</uri>
+      <uri>model://dining_chair</uri>
       <name>DiningChair_1</name>
       <pose>1.75572 -0.41893 0 0 -0 1.55554</pose>
     </include>
     <include>
-      <uri>file:///home/zero/.ignition/fuel/fuel.gazebosim.org/openrobotics/models/standing person/3</uri>
+      <uri>model://standing_person</uri>
       <name>person_standing</name>
       <pose>1.1657 2.15823 -0 0 0 -0</pose>
     </include>
     <include>
-      <uri>file:///home/zero/.ignition/fuel/fuel.gazebosim.org/openrobotics/models/nist maze wall 120/3</uri>
+      <uri>model://nist_maze_wall_120</uri>
       <name>nist_maze_wall_120</name>
       <pose>3.53259 -2.31805 0 0 0 -1.65141</pose>
     </include>
