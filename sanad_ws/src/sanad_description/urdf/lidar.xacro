@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Lidar dimensions -->
+  <xacro:property name="lidar_radius" value="0.1" />
+  <xacro:property name="lidar_height" value="0.05" />
+    
+    <!-- System plugin for all sensors -->
+    <plugin filename="libignition-gazebo-sensors-system.so" name="ignition::gazebo::systems::Sensors">
+      <render_engine>ogre</render_engine>
+    </plugin>
+
+  <!-- Lidar link -->
+  <link name="lidar_link">
+    <visual>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Lidar joint -->
+  <joint name="base_lidar_joint" type="fixed">
+    <!-- Position = front of base, at same height as camera or lower -->
+    <origin xyz="0.0 0.0 0.25" rpy="0.0 0.0 0.0"/>
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+  </joint>
+
+  <!-- Gazebo Lidar Plugin -->
+  <gazebo reference="lidar_link">
+    <sensor name="lidar" type="gpu_ray">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>true</visualize>
+      <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14</min_angle>
+            <max_angle>3.14</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.3</min>
+          <max>12</max>
+        </range>
+      </ray>
+      <topic>lidar/scan</topic>
+      <always_on>1</always_on>
+    </sensor>
+  </gazebo>
+
+</robot>
