@@ -10,7 +10,9 @@
 
     <node pkg="joint_state_publisher_gui" exec="joint_state_publisher_gui" />
 
-    
+  <node pkg="ros_gz_bridge" exec="parameter_bridge" output="screen">
+    <param name="topics" value="/lidar/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan]"/>
+  </node>
 
     <node pkg="rviz2" exec="rviz2" output="screen" args="-d $(var rviz_config_path)" />
 </launch>

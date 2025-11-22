@@ -163,12 +163,18 @@ Visualization Manager:
         TF: true
         Value: true
       Zoom Factor: 1
-  Enabled: true
-  Global Options:
-    Background Color: 48; 48; 48
-    Fixed Frame: base_link
-    Frame Rate: 30
-  Name: root
+    - Class: rviz_default_plugins/LaserScan
+      Enabled: true
+      Name: LiDAR
+      Topic: /lidar/scan
+      Color: 255; 0; 0
+      Size (m): 0.1
+      Enabled: true
+      Global Options:
+        Background Color: 48; 48; 48
+        Fixed Frame: base_link
+        Frame Rate: 30
+      Name: root
   Tools:
     - Class: rviz_default_plugins/Interact
       Hide Inactive Objects: true
