@@ -75,11 +75,9 @@
         <visual name='visual_wood'>
           <geometry>
             <mesh>
-          <scale>1 1 1</scale>
-          <uri>
-          https://fuel.gazebosim.org/1.0/OpenRobotics/models/Dining Table
-          </uri>
-<submesh>
+              <scale>1 1 1</scale>
+              <uri>file:///media/mazen/Windows/Projects/ROS/SANAD/ROS/sanad_ws/install/sanad_bringup/share/sanad_bringup/models/dining_table/meshes/diningtable.dae</uri>
+              <submesh>
                 <name>Wood</name>
                 <center>false</center>
               </submesh>
@@ -101,9 +99,7 @@
           <geometry>
             <mesh>
               <scale>1 1 1</scale>
-              <uri>
-              https://fuel.gazebosim.org/1.0/OpenRobotics/models/Dining Table
-              </uri> 
+              <uri>file:///media/mazen/Windows/Projects/ROS/SANAD/ROS/sanad_ws/install/sanad_bringup/share/sanad_bringup/models/dining_table/meshes/diningtable.dae</uri>
               <submesh>
                 <name>Black</name>
                 <center>false</center>
@@ -309,10 +305,8 @@
         <visual name='visual'>
           <geometry>
             <mesh>
-                  <uri>
-                  https://fuel.gazebosim.org/1.0/OpenRobotics/models/Dining Chair
-                  </uri>
-                  </mesh>
+              <uri>file:///media/mazen/Windows/Projects/ROS/SANAD/ROS/sanad_ws/install/sanad_bringup/share/sanad_bringup/models/dining_chair/meshes/diningchair.dae</uri>
+            </mesh>
           </geometry>
           <material>
             <diffuse>1 1 1 1</diffuse>
@@ -440,10 +434,8 @@
         <visual name='visual'>
           <geometry>
             <mesh>
-              <uri>
-              https://fuel.gazebosim.org/1.0/OpenRobotics/models/Dining Chair
-              </uri>
-              </mesh>
+              <uri>file:///media/mazen/Windows/Projects/ROS/SANAD/ROS/sanad_ws/install/sanad_bringup/share/sanad_bringup/models/dining_chair/meshes/diningchair.dae</uri>
+            </mesh>
           </geometry>
           <material>
             <diffuse>1 1 1 1</diffuse>
