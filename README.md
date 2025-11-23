@@ -65,6 +65,11 @@ To start the robot simulation in Gazebo (Ignition), run:
 ros2 launch sanad_bringup sanad_gazebo.launch.xml
 ```
 
+Just make the pose of sanad:
+- x: -4
+- y: -5
+- z: 0.9
+
 ### Running the Keyboard Teleop Node
 
 1.Source the workspace:
