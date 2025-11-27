@@ -112,6 +112,7 @@ class KeyboardTeleopNode(Node):
                 elif key == ' ':  # Stop
                     self.publish_velocity(0.0, 0.0)
                     self.get_logger().info('Stopped')
+            
                 
         except Exception as e:
             self.get_logger().error(f'Error: {str(e)}')

@@ -1,0 +1,47 @@
+slam_toolbox:
+  ros__parameters:
+    # Basic Settings
+    use_sim_time: true
+    
+    # Topics
+    scan_topic: /lidar/scan
+    
+    # Frame IDs - CORRECTED BASED ON YOUR TF TREE
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_footprint_link  # This is your base frame!
+    
+    # Mode
+    mode: mapping
+    
+    # Map Settings
+    resolution: 0.05
+    map_update_interval: 2.0
+    
+    # Laser Settings
+    max_laser_range: 8.0
+    minimum_time_interval: 0.5
+    transform_timeout: 0.2
+    minimum_valid_laser_range: 0.25
+    
+    # Loop Closure
+    do_loop_closing: true
+    loop_match_minimum_chain_size: 10
+    loop_match_max_variance: 0.3
+    loop_match_minimum_response_coarse: 0.35
+    loop_match_minimum_response_fine: 0.45
+    
+    # Correlation
+    correlation_search_space_dimension: 0.5
+    correlation_search_space_resolution: 0.01
+    correlation_search_space_smear_deviation: 0.1
+    
+    # Scan Matcher
+    use_scan_matching: true
+    use_scan_barycenter: true
+    minimum_travel_distance: 0.2
+    minimum_travel_heading: 0.2
+    scan_buffer_size: 10
+    scan_buffer_maximum_scan_distance: 10.0
+    link_match_minimum_response_fine: 0.1
+    link_scan_maximum_distance: 1.5

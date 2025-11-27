@@ -32,3 +32,4 @@ venv/
 Thumbs.db
 
 ROS.code-workspace
+yolo*
