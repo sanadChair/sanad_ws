@@ -65,11 +65,6 @@ To start the robot simulation in Gazebo (Ignition), run:
 ros2 launch sanad_bringup sanad_gazebo.launch.xml
 ```
 
-Just make the pose of sanad:
-- x: -4
-- y: -5
-- z: 0.9
-
 ### Running the Keyboard Teleop Node
 
 1.Source the workspace:
@@ -82,6 +77,30 @@ source ~/sanad_ws/install/setup.bash
 
 ```bash
 ros2 run sanad_interface_pkg keyboard_twist 
+```
+
+### Running the SLAM mapping Node
+1. Launch the sanad_mapping package it will open a Rviz2 window and Gazebo simulation with SLAM capabilities:
+
+```bash
+ros2 launch sanad_mapping slam_mapping.launch.py
+```
+2. In a new terminal, build the packages, source the workspace and run the teleop node to control the robot:
+
+```bash
+colcon build --symlink-install
+source install/setup.bash
+ros2 run sanad_interface_pkg keyboard_twist 
+```
+
+Move the robot using keyboard inputs make sure you go across all the environment and return to the origin point to create a full map.
+
+3. After mapping is done, save the map using the following command in a new terminal:
+
+```bash
+colcon build --symlink-install
+source install/setup.bash
+ros2 run nav2_map_server map_saver_cli -f map_file
 ```
 
 ## Development
