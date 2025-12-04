@@ -1,0 +1,9 @@
+/home/zero/sanad/ROS/sanad_ws/src/build/sanad_bringup/CMakeFiles/uninstall.dir
+/home/zero/sanad/ROS/sanad_ws/src/build/sanad_bringup/CMakeFiles/sanad_bringup_uninstall.dir
+/home/zero/sanad/ROS/sanad_ws/src/build/sanad_bringup/CMakeFiles/test.dir
+/home/zero/sanad/ROS/sanad_ws/src/build/sanad_bringup/CMakeFiles/edit_cache.dir
+/home/zero/sanad/ROS/sanad_ws/src/build/sanad_bringup/CMakeFiles/rebuild_cache.dir
+/home/zero/sanad/ROS/sanad_ws/src/build/sanad_bringup/CMakeFiles/list_install_components.dir
+/home/zero/sanad/ROS/sanad_ws/src/build/sanad_bringup/CMakeFiles/install.dir
+/home/zero/sanad/ROS/sanad_ws/src/build/sanad_bringup/CMakeFiles/install/local.dir
+/home/zero/sanad/ROS/sanad_ws/src/build/sanad_bringup/CMakeFiles/install/strip.dir

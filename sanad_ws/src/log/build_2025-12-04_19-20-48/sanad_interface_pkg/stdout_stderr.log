@@ -1,0 +1,47 @@
+running egg_info
+creating ../build/sanad_interface_pkg/sanad_interface_pkg.egg-info
+writing ../build/sanad_interface_pkg/sanad_interface_pkg.egg-info/PKG-INFO
+writing dependency_links to ../build/sanad_interface_pkg/sanad_interface_pkg.egg-info/dependency_links.txt
+writing entry points to ../build/sanad_interface_pkg/sanad_interface_pkg.egg-info/entry_points.txt
+writing requirements to ../build/sanad_interface_pkg/sanad_interface_pkg.egg-info/requires.txt
+writing top-level names to ../build/sanad_interface_pkg/sanad_interface_pkg.egg-info/top_level.txt
+writing manifest file '../build/sanad_interface_pkg/sanad_interface_pkg.egg-info/SOURCES.txt'
+reading manifest file '../build/sanad_interface_pkg/sanad_interface_pkg.egg-info/SOURCES.txt'
+writing manifest file '../build/sanad_interface_pkg/sanad_interface_pkg.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build
+creating /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib
+creating /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib/sanad_interface_pkg
+copying sanad_interface_pkg/ps3_twist.py -> /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib/sanad_interface_pkg
+copying sanad_interface_pkg/keyboard_twist.py -> /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib/sanad_interface_pkg
+copying sanad_interface_pkg/__init__.py -> /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib/sanad_interface_pkg
+copying sanad_interface_pkg/keyboard.py -> /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib/sanad_interface_pkg
+copying sanad_interface_pkg/human_follower.py -> /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib/sanad_interface_pkg
+running install
+running install_lib
+creating /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg
+copying /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib/sanad_interface_pkg/ps3_twist.py -> /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg
+copying /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib/sanad_interface_pkg/keyboard_twist.py -> /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg
+copying /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib/sanad_interface_pkg/__init__.py -> /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg
+copying /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib/sanad_interface_pkg/keyboard.py -> /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg
+copying /home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/build/lib/sanad_interface_pkg/human_follower.py -> /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg
+byte-compiling /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg/ps3_twist.py to ps3_twist.cpython-310.pyc
+byte-compiling /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg/keyboard_twist.py to keyboard_twist.cpython-310.pyc
+byte-compiling /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg/__init__.py to __init__.cpython-310.pyc
+byte-compiling /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg/keyboard.py to keyboard.cpython-310.pyc
+byte-compiling /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg/human_follower.py to human_follower.cpython-310.pyc
+running install_data
+creating /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/share/ament_index
+creating /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/share/ament_index/resource_index
+creating /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/share/ament_index/resource_index/packages
+copying resource/sanad_interface_pkg -> /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/share/ament_index/resource_index/packages
+copying package.xml -> /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/share/sanad_interface_pkg
+running install_egg_info
+Copying ../build/sanad_interface_pkg/sanad_interface_pkg.egg-info to /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/python3.10/site-packages/sanad_interface_pkg-0.0.0-py3.10.egg-info
+running install_scripts
+Installing human_follower script to /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/sanad_interface_pkg
+Installing keyboard script to /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/sanad_interface_pkg
+Installing keyboard_twist script to /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/sanad_interface_pkg
+Installing ps3_twist script to /home/zero/sanad/ROS/sanad_ws/src/install/sanad_interface_pkg/lib/sanad_interface_pkg
+writing list of installed files to '/home/zero/sanad/ROS/sanad_ws/src/build/sanad_interface_pkg/install.log'
