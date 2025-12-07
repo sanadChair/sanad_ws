@@ -42,7 +42,7 @@ hardware_interface::CallbackReturn DiffDriveArduinoHardware::on_init(
   cfg_.device = info_.hardware_parameters["device"];
   cfg_.baud_rate = std::stoi(info_.hardware_parameters["baud_rate"]);
   cfg_.timeout_ms = std::stoi(info_.hardware_parameters["timeout_ms"]);
-  cfg_.enc_counts_per_rev = std::stoi(info_.hardware_parameters["enc_counts_per_rev"]);
+  // cfg_.enc_counts_per_rev = std::stoi(info_.hardware_parameters["enc_counts_per_rev"]);
   // if (info_.hardware_parameters.count("pid_p") > 0)
   // {
   //   cfg_.pid_p = std::stoi(info_.hardware_parameters["pid_p"]);
