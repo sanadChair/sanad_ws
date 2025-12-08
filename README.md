@@ -1,4 +1,5 @@
 # Part 1: Sanad Workspace (sanad_ws) testing
+
 1
 A ROS2 workspace containing the `sanad_interface_pkg` package for robot control interfaces.
 
@@ -63,6 +64,7 @@ This command will create the build/, install/, and log/ directories.
 The workspace now supports different hardware backends via the `ros2_control_hardware` parameter:
 
 #### 1. Gazebo Simulation (Gazebo Plugin)
+
 To start the robot simulation in Gazebo with `gz_ros2_control`:
 
 ```bash
@@ -70,6 +72,7 @@ ros2 launch sanad_bringup sanad_gazebo.launch.py
 ```
 
 #### 2. Real Hardware (DiffDrive Arduino - Default)
+
 To launch with the real Arduino-based differential drive hardware:
 
 ```bash
@@ -77,6 +80,7 @@ ros2 launch sanad_bringup sanad.launch.py
 ```
 
 #### 3. Mock Hardware (Testing)
+
 To launch with mock hardware for testing without physical hardware:
 
 ```bash
@@ -94,7 +98,7 @@ source ~/sanad_ws/install/setup.bash
 2. Run the node:
 
 ```bash
-ros2 run sanad_interface_pkg keyboard_twist 
+ros2 run sanad_interface_pkg keyboard_twist
 ```
 
 ## Development
@@ -115,9 +119,10 @@ ros2 run sanad_interface_pkg keyboard_twist
 5. Create a Pull Request
 
 ### ⚙️ Sensor-to-Software Mapping Table
-| **Sensor / Input**                        | **ROS2 Node / Package**          | **Published Topics**                                                                             | **Msg Type**                        | **Rate (Hz)**                | **Processor**         | **Purpose / Notes**                                                                         |
-| ----------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------- | ---------------------------- | --------------------- | ------------------------------------------------------------------------------------------- |
-| **keyboard**            | `keyboard/sanad_interface_pkg`                    | `/cmd_vel`                                                                                          | `sensor_msgs/Int8`             |  _                     | _          | Publish keyboard commands throught Micro Ros agent to control sanad movement                     |
+
+| **Sensor / Input** | **ROS2 Node / Package**        | **Published Topics** | **Msg Type**       | **Rate (Hz)** | **Processor** | **Purpose / Notes**                                                          |
+| ------------------ | ------------------------------ | -------------------- | ------------------ | ------------- | ------------- | ---------------------------------------------------------------------------- |
+| **keyboard**       | `keyboard/sanad_interface_pkg` | `/cmd_vel`           | `sensor_msgs/Int8` | \_            | \_            | Publish keyboard commands throught Micro Ros agent to control sanad movement |
 
 # Part 2: Sanad Chair Control System
 
