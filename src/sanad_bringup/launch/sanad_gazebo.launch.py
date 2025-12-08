@@ -12,24 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+from os import pathsep
+from pathlib import Path
+from ament_index_python.packages import get_package_share_directory
+
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    SetEnvironmentVariable,
+)
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     Command,
     FindExecutable,
-    PathJoinSubstitution,
     LaunchConfiguration,
+    PathJoinSubstitution,
+    PythonExpression,
 )
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
+    # Get package directories
+    sanad_description = get_package_share_directory("sanad_description")
+    sanad_bringup = get_package_share_directory("sanad_bringup")
 
     # Declare arguments
     declared_arguments = []
+
     declared_arguments.append(
         DeclareLaunchArgument(
             "gui",
@@ -38,22 +53,93 @@ def generate_launch_description():
         )
     )
 
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            name="model",
+            default_value=os.path.join(sanad_description, "urdf", "sanad.urdf.xacro"),
+            description="Absolute path to robot urdf file",
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            name="world_name",
+            default_value="small_house",
+            description="Name of world to load (without .world extension)",
+        )
+    )
+
     # Initialize Arguments
     gui = LaunchConfiguration("gui")
+    model_arg = LaunchConfiguration("model")
+    world_name = LaunchConfiguration("world_name")
 
-    # gazebo
+    # Setup model path for Gazebo
+    model_path = str(Path(sanad_bringup).parent.resolve())
+    model_path += pathsep + os.path.join(sanad_bringup, "models")
+
+    gazebo_resource_path = SetEnvironmentVariable("GZ_SIM_RESOURCE_PATH", model_path)
+
+    # Build world path dynamically
+    world_path = PathJoinSubstitution(
+        [
+            sanad_bringup,
+            "worlds",
+            PythonExpression(expression=["'", world_name, "'", " + '.world'"]),
+        ]
+    )
+
+    # Get ROS distro to set is_ignition flag
+    ros_distro = os.environ.get("ROS_DISTRO", "humble")
+    is_ignition = "True" if ros_distro == "humble" else "False"
+
+    # Get URDF via xacro
+    robot_description_content = Command(
+        [
+            "xacro ",
+            model_arg,
+            " ros2_control_hardware:=gazebo is_ignition:=",
+            is_ignition,
+        ]
+    )
+    robot_description = ParameterValue(robot_description_content, value_type=str)
+
+    # RViz config file
+    rviz_config_file = PathJoinSubstitution(
+        [FindPackageShare("sanad_description"), "rviz", "config.rviz"]
+    )
+
+    # Robot State Publisher
+    robot_state_publisher_node = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        output="screen",
+        parameters=[{"robot_description": robot_description, "use_sim_time": True}],
+    )
+
+    # Gazebo
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [FindPackageShare("ros_gz_sim"), "/launch/gz_sim.launch.py"]
         ),
-        launch_arguments=[("gz_args", " -r -v 3 empty.sdf")],
+        launch_arguments=[
+            ("gz_args", PythonExpression(["'", world_path, " -v 4 -r'"]))
+        ],
         condition=IfCondition(gui),
     )
+
     gazebo_headless = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [FindPackageShare("ros_gz_sim"), "/launch/gz_sim.launch.py"]
         ),
-        launch_arguments=[("gz_args", ["--headless-rendering -s -r -v 3 empty.sdf"])],
+        launch_arguments=[
+            (
+                "gz_args",
+                PythonExpression(
+                    ["'--headless-rendering -s -r -v 4 ", world_path, "'"]
+                ),
+            )
+        ],
         condition=UnlessCondition(gui),
     )
 
@@ -68,6 +154,7 @@ def generate_launch_description():
         output="screen",
     )
 
+    # Spawn entity
     gz_spawn_entity = Node(
         package="ros_gz_sim",
         executable="create",
@@ -82,30 +169,7 @@ def generate_launch_description():
         ],
     )
 
-    # Get URDF via xacro
-    robot_description_content = Command(
-        [
-            PathJoinSubstitution([FindExecutable(name="xacro")]),
-            " ",
-            PathJoinSubstitution(
-                [FindPackageShare("sanad_description"), "urdf", "sanad.urdf.xacro"]
-            ),
-            " ",
-            "ros2_control_hardware:=gazebo",
-        ]
-    )
-    robot_description = {"robot_description": robot_description_content}
-    rviz_config_file = PathJoinSubstitution(
-        [FindPackageShare("sanad_description"), "rviz", "config.rviz"]
-    )
-
-    node_robot_state_publisher = Node(
-        package="robot_state_publisher",
-        executable="robot_state_publisher",
-        output="screen",
-        parameters=[robot_description],
-    )
-
+    # Robot controllers
     robot_controllers = PathJoinSubstitution(
         [
             FindPackageShare("sanad_bringup"),
@@ -144,6 +208,8 @@ def generate_launch_description():
             "/controller_manager",
         ],
     )
+
+    # RViz
     rviz_node = Node(
         package="rviz2",
         executable="rviz2",
@@ -154,11 +220,12 @@ def generate_launch_description():
     )
 
     nodes = [
+        gazebo_resource_path,
+        control_node,
+        robot_state_publisher_node,
         gazebo,
         gazebo_headless,
         gazebo_bridge,
-        control_node,
-        node_robot_state_publisher,
         gz_spawn_entity,
         joint_state_broadcaster_spawner,
         robot_controller_spawner,
