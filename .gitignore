@@ -3,9 +3,13 @@
 # -----------------------------------------------------------------------------
 
 # Colcon's standard build and log directories
-sanad_ws/build/
-sanad_ws/install/
-sanad_ws/log/
+# sanad_ws/build/
+# sanad_ws/install/
+# sanad_ws/log/
+
+build/
+install/
+log/
 
 # Python compiled files (for ament_python packages)
 **/*.pyc
