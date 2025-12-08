@@ -90,6 +90,8 @@ def generate_launch_description():
             PathJoinSubstitution(
                 [FindPackageShare("sanad_description"), "urdf", "sanad.urdf.xacro"]
             ),
+            " ",
+            "ros2_control_hardware:=gazebo",
         ]
     )
     robot_description = {"robot_description": robot_description_content}
