@@ -10,7 +10,6 @@ find_package(ament_cmake REQUIRED)
 find_package(sanad_description REQUIRED)
 find_package(ros_gz_sim REQUIRED)
 
-
 install(
   DIRECTORY launch config worlds models
   DESTINATION share/${PROJECT_NAME}/

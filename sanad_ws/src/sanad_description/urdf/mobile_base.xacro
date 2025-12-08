@@ -36,6 +36,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
     </visual>
+    
   </link>
   <link name="base_link">
     <visual>
@@ -95,7 +96,7 @@
     <axis xyz="0 0 1" />
   </joint>
 
-  <joint name="base_caster_wheel_joint" type="continuous">
+  <joint name="base_caster_wheel_joint" type="fixed">
     <parent link="base_link" />
     <child link="caster_wheel_link" />
     <origin xyz="${base_length / 3} 0 -${wheel_radius / 2}" rpy="0 0 0" />
