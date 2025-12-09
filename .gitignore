@@ -3,9 +3,6 @@
 # -----------------------------------------------------------------------------
 
 # Colcon's standard build and log directories
-# sanad_ws/build/
-# sanad_ws/install/
-# sanad_ws/log/
 
 build/
 install/
