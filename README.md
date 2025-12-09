@@ -1,4 +1,4 @@
-# Part 1: Sanad Workspace (sanad_ws) testing
+# Part 1: Sanad Workspace (sanad_ws)
 
 1
 A ROS2 workspace containing the `sanad_interface_pkg` package for robot control interfaces.
@@ -38,7 +38,7 @@ Before cloning this project, you need to create a GitHub Personal Access Token t
 
 ```bash
 cd ~
-git clone https://github.com/sanadChair/ROS.git
+git clone https://github.com/sanadChair/sanad_ws.git
 cd sanad_ws
 ```
 
@@ -57,18 +57,38 @@ source install/setup.bash
 
 This command will create the build/, install/, and log/ directories.
 
+**Optional:** To automatically source the workspace setup on every new terminal session, add the following line to your `.bashrc`:
+
+```bash
+echo "source ~/sanad_ws/install/setup.bash" >> ~/.bashrc
+```
+
+Then reload your shell:
+
+```bash
+source ~/.bashrc
+```
+
 ## Running the Packages
-
-### Launching with Hardware Selection
-
-The workspace now supports different hardware backends via the `ros2_control_hardware` parameter:
 
 #### 1. Gazebo Simulation (Gazebo Plugin)
 
-To start the robot simulation in Gazebo with `gz_ros2_control`:
+To start the robot simulation in Gazebo with `gz_ros2_control` (loads `small_house.world` by default):
 
 ```bash
 ros2 launch sanad_bringup sanad_gazebo.launch.py
+```
+
+To load the empty world instead:
+
+```bash
+ros2 launch sanad_bringup sanad_gazebo.launch.py world_name:=empty
+```
+
+To control the robot using stamped teleop keyboard:
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel -p stamped:=true
 ```
 
 #### 2. Real Hardware (DiffDrive Arduino - Default)
@@ -79,6 +99,12 @@ To launch with the real Arduino-based differential drive hardware:
 ros2 launch sanad_bringup sanad.launch.py
 ```
 
+To control the robot using stamped teleop keyboard:
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard -p stamped:=true
+```
+
 #### 3. Mock Hardware (Testing)
 
 To launch with mock hardware for testing without physical hardware:
@@ -87,19 +113,13 @@ To launch with mock hardware for testing without physical hardware:
 ros2 launch sanad_bringup sanad.launch.py ros2_control_hardware:=mock
 ```
 
-### Running the Keyboard Teleop Node
-
-1. Source the workspace:
+To control the robot using stamped teleop keyboard:
 
 ```bash
-source ~/sanad_ws/install/setup.bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard -p stamped:=true
 ```
 
-2. Run the node:
-
-```bash
-ros2 run sanad_interface_pkg keyboard_twist
-```
+**Note:** The `stamped:=true` parameter enables stamped twist messages, which provide better timestamp information for the control system. The remapping in the Gazebo version ensures commands are properly routed to the diff_drive_controller.
 
 ## Development
 
@@ -123,86 +143,3 @@ ros2 run sanad_interface_pkg keyboard_twist
 | **Sensor / Input** | **ROS2 Node / Package**        | **Published Topics** | **Msg Type**       | **Rate (Hz)** | **Processor** | **Purpose / Notes**                                                          |
 | ------------------ | ------------------------------ | -------------------- | ------------------ | ------------- | ------------- | ---------------------------------------------------------------------------- |
 | **keyboard**       | `keyboard/sanad_interface_pkg` | `/cmd_vel`           | `sensor_msgs/Int8` | \_            | \_            | Publish keyboard commands throught Micro Ros agent to control sanad movement |
-
-# Part 2: Sanad Chair Control System
-
-This repository contains the firmware for the **Sanad Chair**, a smart chair controlled remotely via **micro-ROS** over Wi-Fi. The system is designed for an **ESP32** or similar microcontroller, utilizing the **PlatformIO** development ecosystem.
-
-## 🗃️ Project Structure
-
-The project is organized using PlatformIO's standard structure, with custom libraries stored in the `lib` folder.
-
-```
-sanad_control/
-├── .pio/               # PlatformIO build files
-├── include/            # Common header files (if any)
-├── lib/                # Custom Libraries/Classes
-│   ├── Config/         # System configuration (pins, network settings)
-│   │   ├── config.h
-│   │   └── env.h
-│   ├── l298n/          # L298N Motor Driver Control
-│   │   ├── l298n.cpp
-│   │   └── l298n.h
-│   ├── RosComm/        # micro-ROS Communication Node
-│   │   ├── RosRobotNode.cpp
-│   │   └── RosRobotNode.h
-│   ├── sanadChair/     # Top-Level System Class
-│   │   ├── sanadChair.cpp
-│   │   └── sanadChair.h
-│   └── ultrasonic/     # Ultrasonic Sensor Interface
-│       ├── ultrasonic.cpp
-│       └── ultrasonic.h
-├── src/                # Main execution code (Arduino sketch)
-│   └── main.cpp
-└── README.md           # This file`
-```
-
----
-
-## ⚙️ System Overview
-
-The Sanad Chair system is built around several decoupled components, communicating with a central **ROS 2** network (via a ROS Agent) to achieve remote control and data reporting.
-
-| Component             | Responsibility                                                                                                           | Files            |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------- |
-| **L298N**             | Low-level control for the two motors (movement, speed, direction).                                                       | `l298n.*`        |
-| **Ultrasonic Sensor** | Provides distance measurements for obstacle detection.                                                                   | `ultrasonic.*`   |
-| **RosRobotNode**      | Manages the micro-ROS connection, handles Wi-Fi, subscribes to control commands, and publishes sensor data.              | `RosRobotNode.*` |
-| **SanadChair**        | The top-level class that instantiates, initializes, and manages the lifecycle of the Motor Driver, Sensor, and ROS Node. | `sanadChair.*`   |
-| **Main Application**  | Initializes the `SanadChair` object and calls the main `update()` loop.                                                  | `main.cpp`       |
-| **Config**            | Defines all hardware pin assignments (e.g., `TRIG_PIN`, `IN1`)                                                           | `config.h`       |
-| **env**               | Defines all environment variables such as network credentials (`WIFI_SSID`), and ROS Agent connection details.           | `env.h`          |
-
----
-
-## 🚀 Key Features
-
-- **Remote Control via ROS 2:** The robot is controlled by receiving movement commands over a **ROS topic** (subscribed by `RosRobotNode`).
-- **Decoupled Hardware Interfaces:** The motor driver and sensor logic are encapsulated in their own classes, making them reusable and easy to test.
-- **Distance Sensing:** The ultrasonic sensor provides real-time data for navigation and collision avoidance, published to a **ROS topic**.
-- **Object-Oriented Architecture:** Clean design using C++ classes to manage state and complexity.
-- **PlatformIO Ready:** Designed for easy build, upload, and dependency management using the PlatformIO ecosystem.
-
----
-
-## 🔌 Setup and Configuration
-
-1. **PlatformIO:** Ensure you have PlatformIO installed in VS Code.
-2. **Configuration:** Edit `lib/Config/config.h` to define:
-   - The GPIO pins for the **L298N** module (IN1, IN2, IN3, IN4, ENA, ENB).
-   - The GPIO pins for the **Ultrasonic Sensor** (TRIG_PIN, ECHO_PIN).
-3. **Environment Variables:** Copy `lib/config/env.example.h` and then create `env.h` file and Edit it to define:
-   - Your Wi-Fi SSID and password (`WIFI_SSID`, `WIFI_PASSWORD`).
-   - The IP address and port of your ROS Agent (`AGENT_IP`, `AGENT_PORT`).
-4. **Dependencies:** PlatformIO will automatically handle external libraries, but ensure the `micro_ros_arduino` library is correctly configured.
-5. **ROS Agent:** A ROS Agent must be running on your network (e.g., on a desktop computer) to bridge communication between the microcontroller and the ROS 2 network.
-
----
-
-## 💻 Usage (Control Flow)
-
-1. The system starts in `main.cpp` by creating a `SanadChair` instance.
-2. `chair->begin(...)` is called, which initializes all hardware interfaces, the Wi-Fi connection, and the **micro-ROS node**.
-3. The `loop()` function repeatedly calls `chair->update()`, which executes the **ROS executor's spin function** (`_rosNode->spin()`).
-4. **Control Input:** When a new movement command (e.g., an integer) arrives on the ROS subscriber topic (e.g., /cmd_vel), the static subscription Callback in `RosRobotNode` translates the message into a motor action (e.g., `_l298n->moveForward()`).
-5. **Sensor Output:** A ROS Timer periodically triggers the static `timerCallback`, which reads the distance using `_ultrasonic->getDistance()` and **publishes** the data to the ROS network.
