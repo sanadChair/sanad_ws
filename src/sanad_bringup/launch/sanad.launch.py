@@ -68,7 +68,6 @@ def generate_launch_description():
         output="both",
         remappings=[
             ("~/robot_description", "/robot_description"),
-            ("/diff_drive_controller/cmd_vel", "/cmd_vel"),
         ],
     )
     robot_state_pub_node = Node(
