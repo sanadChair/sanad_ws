@@ -1,4 +1,4 @@
-# Part 1: Sanad Workspace (sanad_ws)
+# Sanad Workspace (sanad_ws)
 
 1
 A ROS2 workspace containing the `sanad_interface_pkg` package for robot control interfaces.

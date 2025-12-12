@@ -1,17 +1,3 @@
-# Copyright 2021 Open Source Robotics Foundation, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import os
 from os import pathsep
 from pathlib import Path
@@ -233,3 +219,123 @@ def generate_launch_description():
     ]
 
     return LaunchDescription(declared_arguments + nodes)
+
+# import os
+# from ament_index_python.packages import get_package_share_directory
+
+# from launch import LaunchDescription
+# from launch.actions import IncludeLaunchDescription, SetEnvironmentVariable, DeclareLaunchArgument
+# from launch.launch_description_sources import PythonLaunchDescriptionSource
+# from launch.substitutions import Command, PathJoinSubstitution, LaunchConfiguration
+# from launch_ros.actions import Node
+# from launch_ros.substitutions import FindPackageShare
+
+
+# def generate_launch_description():
+#     # Declare variables (equivalent to <let>)
+#     urdf_path = PathJoinSubstitution([
+#         FindPackageShare('sanad_description'),
+#         'urdf',
+#         'sanad.urdf.xacro'
+#     ])
+    
+#     rviz_config_path = PathJoinSubstitution([
+#         FindPackageShare('sanad_description'),
+#         'rviz',
+#         'config.rviz'
+#     ])
+    
+#     gazebo_config_path = PathJoinSubstitution([
+#         FindPackageShare('sanad_bringup'),
+#         'config',
+#         'gazebo_bringup.yaml'
+#     ])
+
+#     default_world = os.path.join(
+#         get_package_share_directory('sanad_bringup'),
+#         'worlds',
+#         'small_house.world'
+#     )
+ 
+#     world = LaunchConfiguration('world')
+
+#     world_arg = DeclareLaunchArgument(
+#         'world',
+#         default_value=default_world,
+#         description='world to load'
+#     )
+    
+#     # Set environment variable
+#     gz_sim_resource_path = SetEnvironmentVariable(
+#         name='GZ_SIM_RESOURCE_PATH',
+#         value=PathJoinSubstitution([
+#             FindPackageShare('sanad_bringup'),
+#             'models'
+#         ])
+#     )
+    
+#     # Robot State Publisher Node
+#     robot_state_publisher_node = Node(
+#         package='robot_state_publisher',
+#         executable='robot_state_publisher',
+#         parameters=[{
+#             'robot_description': Command(['xacro ', urdf_path])
+#         }]
+#     )
+    
+#     # Joint State Publisher GUI Node
+#     joint_state_publisher_gui_node = Node(
+#         package='joint_state_publisher_gui',
+#         executable='joint_state_publisher_gui'
+#     )
+    
+#     # RViz2 Node
+#     rviz2_node = Node(
+#         package='rviz2',
+#         executable='rviz2',
+#         output='screen',
+#         arguments=['-d', rviz_config_path]
+#     )
+    
+#     # Include Gazebo Sim Launch File
+#     gazebo_sim = IncludeLaunchDescription(
+#                 PythonLaunchDescriptionSource([os.path.join(
+#                     get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')]),
+#                     launch_arguments={'gz_args': ['-r -v4 ', world], 'on_exit_shutdown': 'true'}.items()
+#              )
+    
+#     # ROS-Gazebo Sim Create Node (spawn entity)
+#     ros_gz_create_node = Node(package='ros_gz_sim', executable='create',
+#                         arguments=['-topic', 'robot_description',
+#                                    '-name', 'sanad',
+#                                    '-z', '0.1'],
+#                         output='screen')
+    
+#     # ROS-Gazebo Bridge Node
+#     ros_gz_bridge_node = Node(
+#         package='ros_gz_bridge',
+#         executable='parameter_bridge',
+#         parameters=[{
+#             'config_file': gazebo_config_path
+#         }]
+#     )
+
+#     ros_gz_image_bridge = Node(
+#         package="ros_gz_image",
+#         executable="image_bridge",
+#         arguments=["/camera/image_raw"]
+#     )
+    
+    
+    
+#     return LaunchDescription([
+#         world_arg,
+#         gz_sim_resource_path,
+#         robot_state_publisher_node,
+#         # joint_state_publisher_gui_node,
+#         rviz2_node,
+#         gazebo_sim,
+#         ros_gz_bridge_node,
+#         ros_gz_create_node,
+#         ros_gz_image_bridge
+#     ])
