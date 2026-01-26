@@ -220,6 +220,17 @@ def generate_launch_description():
         condition=IfCondition(gui),
     )
 
+    # Noisy odometry node (subscribes to joint_states and publishes noisy odom/TF)
+    noisy_odom_node = Node(
+        package="sanad_controller",
+        executable="noisy",
+        name="noisy_controller",
+        output="screen",
+        parameters=[
+            {"wheel_radius": 0.1, "wheel_separation": 0.45},
+        ],
+    )
+
     nodes = [
         gazebo_resource_path,
         control_node,
@@ -231,6 +242,7 @@ def generate_launch_description():
         joint_state_broadcaster_spawner,
         robot_controller_spawner,
         rviz_node,
+        noisy_odom_node,
     ]
 
     return LaunchDescription(declared_arguments + nodes)

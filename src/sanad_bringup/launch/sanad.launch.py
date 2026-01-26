@@ -105,6 +105,17 @@ def generate_launch_description():
         ],
     )
 
+    # Noisy odometry node (subscribes to joint_states and publishes noisy odom/TF)
+    noisy_odom_node = Node(
+        package="sanad_controller",
+        executable="noisy",
+        name="noisy_controller",
+        output="screen",
+        parameters=[
+            {"wheel_radius": 0.1, "wheel_separation": 0.45},
+        ],
+    )
+
     # Delay rviz start after `joint_state_broadcaster`
     delay_rviz_after_joint_state_broadcaster_spawner = RegisterEventHandler(
         event_handler=OnProcessExit(
@@ -129,6 +140,7 @@ def generate_launch_description():
         joint_state_broadcaster_spawner,
         delay_rviz_after_joint_state_broadcaster_spawner,
         delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
+        noisy_odom_node,
     ]
 
     return LaunchDescription(declared_arguments + nodes)
