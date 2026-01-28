@@ -9,18 +9,15 @@ import numpy as np
 from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import TransformStamped
 import math
-def yaw_to_quaternion(yaw: float):
-    half = yaw * 0.5
-    return (0.0, 0.0, math.sin(half), math.cos(half))
+from tf_transformations import quaternion_from_euler
 
 
 class NoisyController(Node):
 
     def __init__(self):
         super().__init__("noisy_controller")
-        # Defaults aligned with current workspace (gazebo + diff_drive)
-        self.declare_parameter("wheel_radius", 0.1)
-        self.declare_parameter("wheel_separation", 0.45)
+        self.declare_parameter("wheel_radius", 0.033)
+        self.declare_parameter("wheel_separation", 0.17)
 
         self.wheel_radius_ = (
             self.get_parameter("wheel_radius").get_parameter_value().double_value
@@ -29,26 +26,20 @@ class NoisyController(Node):
             self.get_parameter("wheel_separation").get_parameter_value().double_value
         )
 
-        self.get_logger().info("Using wheel radius %.4f" % self.wheel_radius_)
-        self.get_logger().info("Using wheel separation %.4f" % self.wheel_separation_)
+        self.get_logger().info("Using wheel radius %d" % self.wheel_radius_)
+        self.get_logger().info("Using wheel separation %d" % self.wheel_separation_)
 
-        self.left_wheel_prev_pos_ = None
-        self.right_wheel_prev_pos_ = None
+        self.left_wheel_prev_pos_ = 0.0
+        self.right_wheel_prev_pos_ = 0.0
         self.x_ = 0.0
         self.y_ = 0.0
         self.theta_ = 0.0
-
-        # Will resolve wheel indices from JointState.name on first message
-        self.left_joint_name_ = "base_left_wheel_joint"
-        self.right_joint_name_ = "base_right_wheel_joint"
-        self.left_index_ = None
-        self.right_index_ = None
 
         self.joint_sub_ = self.create_subscription(
             JointState, "joint_states", self.jointCallback, 10
         )
         self.odom_pub_ = self.create_publisher(
-            Odometry, "sanad_controller/odom_noisy", 10
+            Odometry, "bumperbot_controller/odom_noisy", 10
         )
 
         self.speed_conversion_ = np.array(
@@ -77,7 +68,7 @@ class NoisyController(Node):
         self.transform_stamped_.header.frame_id = "odom"
         self.transform_stamped_.child_frame_id = "base_footprint_noisy"
 
-        self.prev_time_ = None
+        self.prev_time_ = self.get_clock().now()
 
     def jointCallback(self, msg):
         # Implements the inverse differential kinematic model
@@ -85,44 +76,20 @@ class NoisyController(Node):
         # then calculates the velocity of the robot wrt the robot frame
         # and then converts it in the global frame and publishes the TF
 
-        # Resolve indices on first message to avoid relying on array order
-        if self.left_index_ is None or self.right_index_ is None:
-            try:
-                self.left_index_ = msg.name.index(self.left_joint_name_)
-                self.right_index_ = msg.name.index(self.right_joint_name_)
-                self.get_logger().info(
-                    f"Resolved wheel indices: left={self.left_index_}, right={self.right_index_}"
-                )
-            except ValueError:
-                self.get_logger().warn(
-                    f"Wheel joint names not found in JointState. names={msg.name}"
-                )
-                return
-
         # Add noise to wheel readings
-        wheel_encoder_left = msg.position[self.left_index_] + np.random.normal(0, 0.005)
-        wheel_encoder_right = msg.position[self.right_index_] + np.random.normal(0, 0.005)
-
-        # Initialize previous readings on first callback
-        current_time = Time.from_msg(msg.header.stamp)
-        if self.prev_time_ is None or self.left_wheel_prev_pos_ is None:
-            self.left_wheel_prev_pos_ = wheel_encoder_left
-            self.right_wheel_prev_pos_ = wheel_encoder_right
-            self.prev_time_ = current_time
-            return
+        wheel_encoder_left = msg.position[0] + np.random.normal(0, 0.005)
+        wheel_encoder_right = msg.position[1] + np.random.normal(0, 0.005)
 
         dp_left = wheel_encoder_left - self.left_wheel_prev_pos_
         dp_right = wheel_encoder_right - self.right_wheel_prev_pos_
-        dt = current_time - self.prev_time_
+        dt = Time.from_msg(msg.header.stamp) - self.prev_time_
 
-        # Actualize the prev pose for the next iteration
-        self.left_wheel_prev_pos_ = wheel_encoder_left
-        self.right_wheel_prev_pos_ = wheel_encoder_right
-        self.prev_time_ = current_time
+        # Actualize the prev pose for the next itheration
+        self.left_wheel_prev_pos_ = msg.position[0]
+        self.right_wheel_prev_pos_ = msg.position[1]
+        self.prev_time_ = Time.from_msg(msg.header.stamp)
 
         # Calculate the rotational speed of each wheel
-        if dt.nanoseconds <= 0:
-            return
         fi_left = dp_left / (dt.nanoseconds / S_TO_NS)
         fi_right = dp_right / (dt.nanoseconds / S_TO_NS)
 
@@ -142,9 +109,8 @@ class NoisyController(Node):
         self.y_ += d_s * math.sin(self.theta_)
 
         # Compose and publish the odom message
-        q = yaw_to_quaternion(self.theta_)
-        # Use the time from the JointState for consistency with sim time
-        self.odom_msg_.header.stamp = msg.header.stamp
+        q = quaternion_from_euler(0, 0, self.theta_)
+        self.odom_msg_.header.stamp = self.get_clock().now().to_msg()
         self.odom_msg_.pose.pose.position.x = self.x_
         self.odom_msg_.pose.pose.position.y = self.y_
         self.odom_msg_.pose.pose.orientation.x = q[0]
@@ -162,7 +128,7 @@ class NoisyController(Node):
         self.transform_stamped_.transform.rotation.y = q[1]
         self.transform_stamped_.transform.rotation.z = q[2]
         self.transform_stamped_.transform.rotation.w = q[3]
-        self.transform_stamped_.header.stamp = msg.header.stamp
+        self.transform_stamped_.header.stamp = self.get_clock().now().to_msg()
         self.br_.sendTransform(self.transform_stamped_)
 
 

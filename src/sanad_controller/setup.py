@@ -9,6 +9,8 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
+        ("share/" + package_name + "/launch", ["launch/controller.launch.py"]),
+        ("share/" + package_name + "/config", ["config/sanad_controllers.yaml"]),
     ],
     install_requires=[
         "setuptools",
