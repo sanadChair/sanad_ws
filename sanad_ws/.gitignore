@@ -1,0 +1,35 @@
+# -----------------------------------------------------------------------------
+# ROS 2 / COLCON WORKSPACE FILES
+# -----------------------------------------------------------------------------
+
+# Colcon's standard build and log directories
+
+build/
+install/
+log/
+
+# Python compiled files (for ament_python packages)
+**/*.pyc
+**/__pycache__/
+
+# Common Python environment directories
+.venv/
+venv/
+
+
+# -----------------------------------------------------------------------------
+# Editor / IDE Specific Files
+# -----------------------------------------------------------------------------
+
+# Visual Studio Code
+.vscode/
+
+# Qt Creator
+*.pro.user
+*.pro.user.*
+.idea/
+
+# Windows Files
+Thumbs.db
+
+ROS.code-workspace
