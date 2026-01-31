@@ -3,7 +3,15 @@
     <ros2_control name="sanad_ros2_control" type="system">
         <hardware>
             <xacro:if value="$(arg is_sim)">
-                    <plugin>ign_ros2_control/IgnitionSystem</plugin>
+                <!-- ROS 2 Humble -->
+                <xacro:if value="$(arg is_ignition)">
+                        <plugin>ign_ros2_control/IgnitionSystem</plugin>
+                </xacro:if>
+
+                <!-- ROS 2 Iron or above -->
+                <xacro:unless value="$(arg is_ignition)">
+                        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+                </xacro:unless>
             </xacro:if>
             <xacro:unless value="$(arg is_sim)">
                 <plugin>diffdrive_arduino/DiffDriveArduinoHardware</plugin>

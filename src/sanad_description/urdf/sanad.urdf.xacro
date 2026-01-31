@@ -5,6 +5,9 @@
   <!-- Load Simulated or Real Hardware Interfaces -->
   <xacro:arg name="is_sim" default="true"/>
 
+  <!-- Start GZ or Ignition depending on ROS 2 Version -->
+  <xacro:arg name="is_ignition" default="true"/>
+  
   <!-- Include Gazebo Parameters -->
   <xacro:include filename="$(find sanad_description)/urdf/sanad_gazebo.xacro" />
 
