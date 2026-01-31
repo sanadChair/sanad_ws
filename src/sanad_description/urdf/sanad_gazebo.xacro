@@ -45,7 +45,7 @@
   <!-- ROS 2 Control -->
   <gazebo>
     <plugin filename="ign_ros2_control-system" name="ign_ros2_control::IgnitionROS2ControlPlugin">
-        <parameters>$(find bumperbot_controller)/config/bumperbot_controllers.yaml</parameters>
+        <parameters>$(find sanad_controller)/config/sanad_controllers.yaml</parameters>
       </plugin>
       <plugin filename="ignition-gazebo-imu-system" name="ignition::gazebo::systems::Imu">
       </plugin>
