@@ -1,4 +1,4 @@
-image: small_house.pgm
+image: map.pgm
 mode: trinary
 resolution: 0.05
 origin: [-9.35, -5.63, 0]
