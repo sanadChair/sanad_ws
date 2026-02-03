@@ -64,11 +64,17 @@ source ~/.bashrc
 
 ### 1. Gazebo Simulation
 
-Launch the robot in Gazebo (loads `small_house` world by default):
+Launch the robot in Gazebo (loads the `small_house` world by default). The system supports two operational modes:
 
-```bash
-ros2 launch sanad_bringup simulated_robot.launch.py
-```
+* **Localization Mode (Default):** Run the command as-is to use the existing map.
+    ```bash
+    ros2 launch sanad_bringup simulated_robot.launch.py
+    ```
+
+* **Mapping Mode:** Run with the `use_slam` parameter set to `true` to generate a new map.
+    ```bash
+    ros2 launch sanad_bringup simulated_robot.launch.py use_slam:=true
+    ```
 
 To use a different world:
 
