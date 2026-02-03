@@ -2,7 +2,7 @@
 import rclpy
 import pygame
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import TwistStamped
 
 # init pygame joystick
 pygame.joystick.init()
@@ -13,16 +13,23 @@ class PS3TeolepNode(Node):
     def __init__(self):
         super().__init__("ps3_twist")
         self.get_logger().info("PS3 node is started!")
-        self._publisher = self.create_publisher(Twist, "cmd_vel", 10)
-        self.twist = Twist()
+        self._publisher = self.create_publisher(
+            TwistStamped, "/diff_drive_controller/cmd_vel", 10
+        )
+        self.twist = TwistStamped()
 
     def updateTwist(self, axis, value):
         print(axis, value)
         if axis == 1:  # linear
-            self.twist.linear.x = value * 1.5
+            self.twist.twist.linear.x = value * 1.5
 
         if axis == 0:  # angular
-            self.twist.angular.z = value
+            self.twist.twist.angular.z = value
+
+        # Stamp the message with current time
+        self.twist.header.stamp = self.get_clock().now().to_msg()
+        self.twist.header.frame_id = "base_link"
+
         self._publisher.publish(self.twist)
 
 
