@@ -11,7 +11,7 @@ find_package(sanad_description REQUIRED)
 find_package(ros_gz_sim REQUIRED)
 
 install(
-  DIRECTORY launch 
+  DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}/
 )
 
