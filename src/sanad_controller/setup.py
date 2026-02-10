@@ -10,7 +10,15 @@ setup(
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
         ("share/" + package_name + "/launch", ["launch/controller.launch.py"]),
-        ("share/" + package_name + "/config", ["config/sanad_controllers.yaml"]),
+        ("share/" + package_name + "/config", ["config/sanad_controllers.yaml",
+                                                 "config/joy_teleop.yaml",
+                                                 "config/joy_config.yaml",
+                                                 "config/twist_mux_joy.yaml",
+                                                 "config/twist_mux_locks.yaml",
+                                                 "config/twist_mux_topics.yaml",
+                                                 ]),
+        ("share/" + package_name + "/launch", ["launch/controller.launch.py",
+                                                 "launch/joystick_teleop.launch.py"]),
     ],
     install_requires=[
         "setuptools",
@@ -32,6 +40,7 @@ setup(
         "console_scripts": [
             "noisy = sanad_controller.noisy_controller:main",
             "noisy_controller = sanad_controller.noisy_controller:main",
+            "twist_relay = sanad_controller.twist_relay:main",
         ],
     },
 )
