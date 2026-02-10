@@ -6,7 +6,7 @@
   <description>TODO: Package description</description>
   <maintainer email="yousefkamel282@gmail.com">youssef</maintainer>
   <maintainer email="mohmed.ayman11@gmail.com">zero</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT AND Apache-2.0</license>
 
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>

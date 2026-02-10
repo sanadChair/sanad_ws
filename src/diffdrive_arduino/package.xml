@@ -11,7 +11,7 @@
 
   <author email="denis.stogl@stoglrobotics.de">Dr.-Ing. Denis Štogl</author>
 
-  <license>Apache-2.0</license>
+  <license>MIT AND Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
