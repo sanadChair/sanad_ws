@@ -106,7 +106,7 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/sa
 
 ## Development Notes
 
-- Add new packages to `src/`.
+- Add new packages to `src/`, use `ros2 pkg create --build-type ament_cmake <pkg_name>`
 - Use `colcon build --packages-select <pkg>` for fast iteration.
 - For Python nodes, make scripts executable and add entry points in `setup.py`.
 
