@@ -16,7 +16,7 @@
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
 #include "nav2_msgs/action/smooth_path.hpp"
 
-namespace bumperbot_planning
+namespace sanad_planning
 {
 struct GraphNode
 {
@@ -46,42 +46,39 @@ struct GraphNode
 class DijkstraPlanner : public nav2_core::GlobalPlanner
 {
 public:
-  DijkstraPlanner() = default;
-  ~DijkstraPlanner() = default;
+    DijkstraPlanner() = default;
+    ~DijkstraPlanner() = default;
 
-  void configure(
+    void configure(
     const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
     std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
     std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros) override;
 
-  void cleanup() override;
+    void cleanup() override;
 
-  void activate() override;
+    void activate() override;
 
-  void deactivate() override;
+    void deactivate() override;
 
-  nav_msgs::msg::Path createPlan(
-    const geometry_msgs::msg::PoseStamped & start,
-    const geometry_msgs::msg::PoseStamped & goal) override;
+    nav_msgs::msg::Path createPlan(
+      const geometry_msgs::msg::PoseStamped & start,
+      const geometry_msgs::msg::PoseStamped & goal) override;
 
 private:
-  std::shared_ptr<tf2_ros::Buffer> tf_;
-  nav2_util::LifecycleNode::SharedPtr node_;
-  nav2_costmap_2d::Costmap2D * costmap_;
-  std::string global_frame_, name_;
-  double interpolation_resolution_;
+    std::shared_ptr<tf2_ros::Buffer> tf_;
+    nav2_util::LifecycleNode::SharedPtr node_;
+    nav2_costmap_2d::Costmap2D * costmap_;
+    std::string global_frame_, name_;
+    double interpolation_resolution_;
 
-  rclcpp_action::Client<nav2_msgs::action::SmoothPath>::SharedPtr smooth_client_;
+    bool poseOnMap(const GraphNode & node);
 
-  bool poseOnMap(const GraphNode & node);
-  
-  GraphNode worldToGrid(const geometry_msgs::msg::Pose & pose);
-  
-  geometry_msgs::msg::Pose gridToWorld(const GraphNode & node);
-  
-  unsigned int poseToCell(const GraphNode & node);
+    GraphNode worldToGrid(const geometry_msgs::msg::Pose & pose);
+
+    geometry_msgs::msg::Pose gridToWorld(const GraphNode & node);
+
+    unsigned int poseToCell(const GraphNode & node);
 };
+}  // namespace sanad_planning
 
-}  // namespace bumperbot_planning
-
-#endif  // DIJKSTRA_PLANNER_HPP
+#endif // DIJKSTRA_PLANNER_HPP
