@@ -4,9 +4,9 @@
 		  <description>Simple Dijkstra Planner.</description>
 		</class>
 	</library>
-	<!-- <library path="a_star_planner">
+	<library path="a_star_planner">
 		<class type="sanad_planning::AStarPlanner" base_class_type="nav2_core::GlobalPlanner">
 		  <description>Simple A* Planner.</description>
 		</class>
-	</library> -->
+	</library>
 </class_libraries>

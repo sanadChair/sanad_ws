@@ -35,15 +35,15 @@ set(dependencies
 add_library(dijkstra_planner SHARED src/dijkstra_planner.cpp)
 ament_target_dependencies(dijkstra_planner ${dependencies})
 
-# add_library(a_star_planner SHARED src/a_star_planner.cpp)
-# ament_target_dependencies(a_star_planner ${dependencies})
+add_library(a_star_planner SHARED src/a_star_planner.cpp)
+ament_target_dependencies(a_star_planner ${dependencies})
 
 pluginlib_export_plugin_description_file(nav2_core global_planner_plugins.xml)
 
 
 install(TARGETS
   dijkstra_planner
-  # a_star_planner
+  a_star_planner
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
@@ -75,7 +75,7 @@ endif()
 ament_export_include_directories(include)
 ament_export_libraries(
   dijkstra_planner
-  # a_star_planner
+  a_star_planner
 )
 ament_export_dependencies(${dependencies})
 ament_package()
