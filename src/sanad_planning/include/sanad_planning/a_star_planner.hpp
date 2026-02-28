@@ -73,7 +73,7 @@ private:
     std::string global_frame_, name_;
     double interpolation_resolution_;
 
-    // rclcpp_action::Client<nav2_msgs::action::SmoothPath>::SharedPtr smooth_client_;
+    rclcpp_action::Client<nav2_msgs::action::SmoothPath>::SharedPtr smooth_client_;
 
     bool poseOnMap(const GraphNode & node);
 
