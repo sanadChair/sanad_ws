@@ -66,11 +66,10 @@ def generate_launch_description():
         name="bt_navigator",
         output="screen",
         parameters=[
-            os.path.join(
-                sanad_navigation_pkg,
-                "config",
-                "bt_navigator.yaml"),
-            {"use_sim_time": use_sim_time}
+            os.path.join(sanad_navigation_pkg, "config", "bt_navigator.yaml"),
+            {"use_sim_time": use_sim_time},
+            {"default_nav_to_pose_bt_xml": os.path.join(sanad_navigation_pkg, "behavior_tree", "simple_navigation_w_replanning.xml")},
+            {"default_nav_through_poses_bt_xml": os.path.join(sanad_navigation_pkg, "behavior_tree", "simple_navigation.xml")}
         ],
     )
 
