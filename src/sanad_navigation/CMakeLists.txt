@@ -16,7 +16,7 @@ if(BUILD_TESTING)
 endif()
 
 install(
-  DIRECTORY config launch
+  DIRECTORY config launch behavior_tree rviz
   DESTINATION share/${PROJECT_NAME}
 )
 
