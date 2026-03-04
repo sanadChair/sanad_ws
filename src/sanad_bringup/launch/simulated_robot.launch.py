@@ -6,13 +6,11 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
+
 def generate_launch_description():
     use_slam = LaunchConfiguration("use_slam")
 
-    use_slam_arg = DeclareLaunchArgument(
-        "use_slam",
-        default_value="false"
-    )
+    use_slam_arg = DeclareLaunchArgument("use_slam", default_value="false")
     world_arg = DeclareLaunchArgument(
         name="world",
         default_value="small_house",
@@ -46,56 +44,50 @@ def generate_launch_description():
         os.path.join(
             get_package_share_directory("sanad_localization"),
             "launch",
-            "global_localization.launch.py"
+            "global_localization.launch.py",
         ),
-        condition=UnlessCondition(use_slam)
+        condition=UnlessCondition(use_slam),
     )
 
     slam = IncludeLaunchDescription(
         os.path.join(
-            get_package_share_directory("sanad_mapping"),
-            "launch",
-            "slam.launch.py"
+            get_package_share_directory("sanad_mapping"), "launch", "slam.launch.py"
         ),
-        condition=IfCondition(use_slam)
+        condition=IfCondition(use_slam),
+    )
+    navigation = IncludeLaunchDescription(
+        os.path.join(
+            get_package_share_directory("sanad_navigation"),
+            "launch",
+            "navigation.launch.py",
+        ),
     )
 
-    rviz_localization = Node(
+    rviz = Node(
         package="rviz2",
         executable="rviz2",
-        arguments=["-d", os.path.join(
-                get_package_share_directory("sanad_localization"),
+        arguments=[
+            "-d",
+            os.path.join(
+                get_package_share_directory("nav2_bringup"),
                 "rviz",
-                "global_localization.rviz"
-            )
+                "nav2_default_view.rviz",
+            ),
         ],
         output="screen",
         parameters=[{"use_sim_time": True}],
-        condition=UnlessCondition(use_slam)
     )
 
-    rviz_slam = Node(
-        package="rviz2",
-        executable="rviz2",
-        arguments=["-d", os.path.join(
-                get_package_share_directory("sanad_mapping"),
-                "rviz",
-                "slam.rviz"
-            )
-        ],
-        output="screen",
-        parameters=[{"use_sim_time": True}],
-        condition=IfCondition(use_slam)
+    return LaunchDescription(
+        [
+            use_slam_arg,
+            world_arg,
+            gazebo,
+            controller,
+            # safety_stop,
+            localization,
+            slam,
+            navigation,
+            rviz,
+        ]
     )
-    
-    return LaunchDescription([
-        use_slam_arg,
-        world_arg,
-        gazebo,
-        controller,
-        # safety_stop,
-        localization,
-        slam,
-        rviz_localization,
-        rviz_slam
-    ])
