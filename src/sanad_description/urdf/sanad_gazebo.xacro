@@ -122,14 +122,45 @@
     </sensor>
   </gazebo>
 
-  <!-- 2D Laser Sensor -->
-  <gazebo reference="laser_link">
-    <sensor name="lidar" type="gpu_lidar">
+  <!-- 2D Laser Sensor - Right -->
+  <gazebo reference="laser_right_link">
+    <sensor name="lidar_right" type="gpu_lidar">
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+      <topic>scan_rear</topic>
+      <update_rate>5</update_rate>
+      <gz_frame_id>laser_right_link</gz_frame_id>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1.00000</resolution>
+            <min_angle>0.000000</min_angle>
+            <max_angle>6.280000</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.120000</min>
+          <max>12.0</max>
+          <resolution>0.02</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+  <!-- 2D Laser Sensor - Left -->
+  <gazebo reference="laser_left_link">
+    <sensor name="lidar_left" type="gpu_lidar">
       <always_on>true</always_on>
       <visualize>true</visualize>
       <topic>scan</topic>
       <update_rate>5</update_rate>
-      <gz_frame_id>laser_link</gz_frame_id>
+      <gz_frame_id>laser_left_link</gz_frame_id>
       <lidar>
         <scan>
           <horizontal>
