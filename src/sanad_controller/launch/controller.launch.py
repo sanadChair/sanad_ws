@@ -1,5 +1,10 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, OpaqueFunction, IncludeLaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    GroupAction,
+    OpaqueFunction,
+    IncludeLaunchDescription,
+)
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch.conditions import UnlessCondition, IfCondition
@@ -61,8 +66,8 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time")
     wheel_radius = LaunchConfiguration("wheel_radius")
     wheel_separation = LaunchConfiguration("wheel_separation")
-    
-    sanad_controller_pkg = get_package_share_directory('sanad_controller')
+
+    sanad_controller_pkg = get_package_share_directory("sanad_controller")
 
     robot_controllers = PathJoinSubstitution(
         [
@@ -106,15 +111,19 @@ def generate_launch_description():
 
     twist_mux_launch = IncludeLaunchDescription(
         os.path.join(
-            get_package_share_directory("twist_mux"),
-            "launch",
-            "twist_mux_launch.py"
+            get_package_share_directory("twist_mux"), "launch", "twist_mux_launch.py"
         ),
         launch_arguments={
             "cmd_vel_out": "sanad_controller/cmd_vel_unstamped",
-            "config_locks": os.path.join(sanad_controller_pkg, "config", "twist_mux_locks.yaml"),
-            "config_topics": os.path.join(sanad_controller_pkg, "config", "twist_mux_topics.yaml"),
-            "config_joy": os.path.join(sanad_controller_pkg, "config", "twist_mux_joy.yaml"),
+            "config_locks": os.path.join(
+                sanad_controller_pkg, "config", "twist_mux_locks.yaml"
+            ),
+            "config_topics": os.path.join(
+                sanad_controller_pkg, "config", "twist_mux_topics.yaml"
+            ),
+            "config_joy": os.path.join(
+                sanad_controller_pkg, "config", "twist_mux_joy.yaml"
+            ),
             "use_sim_time": use_sim_time,
         }.items(),
     )
@@ -123,7 +132,7 @@ def generate_launch_description():
         package="sanad_controller",
         executable="twist_relay",
         name="twist_relay",
-        parameters=[{"use_sim_time": use_sim_time}]
+        parameters=[{"use_sim_time": use_sim_time}],
     )
 
     return LaunchDescription(
@@ -136,7 +145,7 @@ def generate_launch_description():
             wheel_separation_error_arg,
             joint_state_broadcaster_spawner,
             wheel_controller_spawner,
-            noisy_controller_launch,
+            # noisy_controller_launch,
             twist_mux_launch,
             twist_relay_node,
         ]

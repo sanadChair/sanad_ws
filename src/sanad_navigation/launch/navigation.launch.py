@@ -4,7 +4,7 @@ from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 
 
@@ -101,6 +101,41 @@ def generate_launch_description():
             {"autostart": True},
         ],
     )
+    front_filter = Node(
+        package="laser_filters",
+        executable="scan_to_scan_filter_chain",
+        parameters=[
+            PathJoinSubstitution(
+                [
+                    get_package_share_directory("sanad_navigation"),
+                    "config",
+                    "laser_filter.yaml",
+                ]
+            )
+        ],
+        remappings=[
+            ("scan", "/scan"),
+            ("scan_filtered", "/scan_front_filtered"),
+        ],
+    )
+
+    rear_filter = Node(
+        package="laser_filters",
+        executable="scan_to_scan_filter_chain",
+        parameters=[
+            PathJoinSubstitution(
+                [
+                    get_package_share_directory("sanad_navigation"),
+                    "config",
+                    "rear_laser_filter.yaml",
+                ]
+            )
+        ],
+        remappings=[
+            ("scan", "/scan_rear"),  # input
+            ("scan_filtered", "/scan_rear_filtered"),  # output
+        ],
+    )
 
     return LaunchDescription(
         [
@@ -111,5 +146,7 @@ def generate_launch_description():
             nav2_bt_navigator,
             nav2_behavior,
             nav2_lifecycle_manager,
+            front_filter,
+            rear_filter,
         ]
     )
