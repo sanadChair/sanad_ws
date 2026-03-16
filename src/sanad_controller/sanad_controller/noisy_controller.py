@@ -9,8 +9,22 @@ import numpy as np
 from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import TransformStamped
 import math
-from tf_transformations import quaternion_from_euler
+# from tf_transformations import quaternion_from_euler
 
+def quaternion_from_euler(roll, pitch, yaw):
+    cy = math.cos(yaw * 0.5)
+    sy = math.sin(yaw * 0.5)
+    cp = math.cos(pitch * 0.5)
+    sp = math.sin(pitch * 0.5)
+    cr = math.cos(roll * 0.5)
+    sr = math.sin(roll * 0.5)
+
+    q = [0.0] * 4
+    q[0] = sr * cp * cy - cr * sp * sy  # x
+    q[1] = cr * sp * cy + sr * cp * sy  # y
+    q[2] = cr * cp * sy - sr * sp * cy  # z
+    q[3] = cr * cp * cy + sr * sp * sy  # w
+    return q
 
 class NoisyController(Node):
 
@@ -39,7 +53,7 @@ class NoisyController(Node):
             JointState, "joint_states", self.jointCallback, 10
         )
         self.odom_pub_ = self.create_publisher(
-            Odometry, "bumperbot_controller/odom_noisy", 10
+            Odometry, "sanad_controller/odom_noisy", 10
         )
 
         self.speed_conversion_ = np.array(

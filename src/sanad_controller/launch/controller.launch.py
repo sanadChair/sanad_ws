@@ -8,7 +8,7 @@ from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
 import os
 from ament_index_python.packages import get_package_share_directory
-
+import numpy as np
 
 def noisy_controller(context, *args, **kwargs):
     use_sim_time = LaunchConfiguration("use_sim_time")
@@ -36,7 +36,6 @@ def noisy_controller(context, *args, **kwargs):
 
 
 def generate_launch_description():
-
     use_sim_time_arg = DeclareLaunchArgument(
         "use_sim_time",
         default_value="True",
