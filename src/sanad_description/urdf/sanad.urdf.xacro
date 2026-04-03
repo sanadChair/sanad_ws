@@ -25,25 +25,22 @@
                izz="2.0064271e-02" />
     </inertial>
     <visual>
-      <origin xyz="0 ${0.416/2} 0" rpy="0 0 0" />
+      <origin xyz="0 -${0.416/2} 0" rpy="0 0 3.14" />
       <geometry>
         <mesh filename="package://sanad_description/meshes/chase.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
-      <origin xyz="0 ${0.416/2} 0" rpy="0 0 0" />
+      <origin xyz="0 -${0.416/2} 0" rpy="0 0 0" />
       <geometry>
         <mesh filename="package://sanad_description/meshes/chase.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
 
-  <joint name="base_joint" type="fixed">
-    <parent link="base_footprint"/>
-    <child link="base_link" />
-    <origin xyz="0 0 0.533" rpy="0 0 0"/>
-  </joint>
+  <!-- ^ Links Section -->
+  <!-- All link elements are grouped below -->
 
   <link name="wheel_left_link">
     <inertial>
@@ -68,12 +65,7 @@
     </collision>
   </link>
 
-  <joint name="wheel_left_joint" type="continuous">
-    <origin xyz="0.22 -${0.580/2} -0.37" rpy="0 0 0" />
-    <parent link="base_link" />
-    <child link="wheel_left_link" />
-    <axis xyz="0 1 0" />
-  </joint>
+  <!-- wheel_left_joint moved to Joints section -->
   <link
     name="wheel_right_link">
     <inertial>
@@ -98,12 +90,7 @@
     </collision>
   </link>
 
-  <joint name="wheel_right_joint" type="continuous">
-    <origin xyz="0.22 ${0.580/2} -0.37" rpy="0 0 0" />
-    <parent link="base_link" />
-    <child link="wheel_right_link" />
-    <axis xyz="0 1 0" />
-  </joint>
+  <!-- wheel_right_joint moved to Joints section -->
 
   <link name="caster_front_link">
     <inertial>
@@ -128,12 +115,7 @@
     </collision>
   </link>
 
-  <joint name="caster_front_joint" type="fixed">
-    <origin xyz="-0.32 0.251 -0.44" rpy="1.57 1.57 0" />
-    <parent link="base_link" />
-    <child link="caster_front_link" />
-    <axis xyz="0 0 0" />
-  </joint>
+  <!-- caster_front_joint moved to Joints section -->
   
   <link name="caster_rear_link">
     <inertial>
@@ -158,12 +140,7 @@
     </collision>
   </link>
 
-  <joint name="caster_rear_joint" type="fixed">
-    <origin xyz="-0.32 -0.251 -0.44" rpy="1.57 1.57 0" />
-    <parent link="base_link" />
-    <child link="caster_rear_link" />
-    <axis xyz="0 0 0" />
-  </joint>
+  <!-- caster_rear_joint moved to Joints section -->
 
   <link name="imu_link">
     <inertial>
@@ -188,12 +165,7 @@
     </collision>
   </link>
   
-  <joint name="imu_joint" type="fixed">
-    <origin xyz="0 0 0.0698986241758014" rpy="0 0 0" />
-    <parent link="base_link" />
-    <child link="imu_link" />
-    <axis xyz="0 0 0" />
-  </joint>
+  <!-- imu_joint moved to Joints section -->
 
   <link name="depth_camera_link">
     <inertial>
@@ -218,12 +190,7 @@
     </collision>
   </link>
 
-  <joint name="depth_camera_joint" type="fixed">
-    <origin xyz="-0.32 -0.245 0.18" rpy="3.14 3.14 0" />
-    <parent link="base_link" />
-    <child link="depth_camera_link" />
-    <axis xyz="0 0 0" />
-  </joint>
+  <!-- depth_camera_joint moved to Joints section -->
 
   <link name="laser_left_link">
     <inertial>
@@ -269,14 +236,66 @@
       </geometry>
     </collision>
   </link>
+  <!-- ^ Joints Section -->
+  <!-- All joint elements are grouped here -->
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link" />
+    <!-- ^Rotate base_link 180 degrees around Z so robot "front" is flipped -->
+    <origin xyz="0 0 0.533" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="wheel_left_joint" type="continuous">
+    <origin xyz="-0.22 ${0.580/2} -0.37" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="wheel_left_link" />
+    <axis xyz="0 1 0" />
+  </joint>
+
+  <joint name="wheel_right_joint" type="continuous">
+    <origin xyz="-0.22 -${0.580/2} -0.37" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="wheel_right_link" />
+    <axis xyz="0 1 0" />
+  </joint>
+
+  <joint name="caster_front_joint" type="fixed">
+    <origin xyz="0.32 -0.251 -0.44" rpy="1.57 1.57 0" />
+    <parent link="base_link" />
+    <child link="caster_front_link" />
+    <axis xyz="0 0 0" />
+  </joint>
+
+  <joint name="caster_rear_joint" type="fixed">
+    <origin xyz="0.32 0.251 -0.44" rpy="1.57 1.57 0" />
+    <parent link="base_link" />
+    <child link="caster_rear_link" />
+    <axis xyz="0 0 0" />
+  </joint>
+
+  <joint name="imu_joint" type="fixed">
+    <origin xyz="0 0 0.0698986241758014" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="imu_link" />
+    <axis xyz="0 0 0" />
+  </joint>
+
+  <joint name="depth_camera_joint" type="fixed">
+    <origin xyz="0.32 0.245 0.18" rpy="3.14 3.14 0" />
+    <parent link="base_link" />
+    <child link="depth_camera_link" />
+    <axis xyz="0 0 0" />
+  </joint>
+
   <joint name="laser_left_joint" type="fixed">
-    <origin xyz="-0.265 ${-(0.245 +0.1)} -0.2" rpy="0 0 1.57" />
+    <origin xyz="0.265 ${(0.245 +0.1)} -0.2" rpy="0 0 ${1.57 + 3.14}" />
     <parent link="base_link" />
     <child link="laser_left_link" />
     <axis xyz="0 0 0" />
   </joint>
-    <joint name="laser_right_joint" type="fixed">
-    <origin xyz="-0.265 ${(0.245 +0.1)} -0.2" rpy="0 0 0" />
+
+  <joint name="laser_right_joint" type="fixed">
+    <origin xyz="0.265 -${(0.245 +0.1)} -0.2" rpy="0 0 3.14" />
     <parent link="base_link" />
     <child link="laser_right_link" />
     <axis xyz="0 0 0" />
