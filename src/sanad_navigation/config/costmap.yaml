@@ -6,7 +6,7 @@ costmap:
       global_frame: map
       robot_base_frame: base_link
       use_sim_time: true
-      robot_radius: 0.1
+      robot_radius: 0.6
       resolution: 0.05
       track_unknown_space: true
 
@@ -20,9 +20,19 @@ costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: scan
-        scan:
-          topic: /scan
+        observation_sources: scan_front_filtered scan_rear_filtered
+        scan_front_filtered:
+          topic: /scan_front_filtered
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          obstacle_min_range: 0.0
+        scan_rear_filtered:
+          topic: /scan_rear_filtered
           max_obstacle_height: 2.0
           clearing: True
           marking: True
@@ -35,6 +45,6 @@ costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.55
+        inflation_radius: 0.65
 
       always_send_full_costmap: True

@@ -110,7 +110,7 @@ class NoisyController(Node):
         # Calculate the linear and angular velocity
         linear = (self.wheel_radius_ * fi_right + self.wheel_radius_ * fi_left) / 2
         angular = (
-            self.wheel_radius_ * fi_right - self.wheel_radius_ * fi_left
+            self.wheel_radius_ * fi_left - self.wheel_radius_ * fi_right
         ) / self.wheel_separation_
 
         # Calculate the position increment

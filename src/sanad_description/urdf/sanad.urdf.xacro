@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-
+<!-- ^fix the center of base_link -->
 <robot name="sanad" xmlns:xacro="http://ros.org/wiki/xacro">
 
   <!-- Load Simulated or Real Hardware Interfaces -->
@@ -25,86 +25,72 @@
                izz="2.0064271e-02" />
     </inertial>
     <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
+      <origin xyz="0 -${0.416/2} 0" rpy="0 0 3.14" />
       <geometry>
-        <mesh filename="package://sanad_description/meshes/base_link.STL" />
+        <mesh filename="package://sanad_description/meshes/chase.stl" scale="0.001 0.001 0.001" />
       </geometry>
-      <material name="black"/>
+      <material name="silver"/>
     </visual>
     <collision>
-      <origin xyz="0 0 0" rpy="0 0 0" />
+      <origin xyz="0 -${0.416/2} 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://sanad_description/meshes/base_link.STL" />
+        <mesh filename="package://sanad_description/meshes/chase.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
 
-  <joint name="base_joint" type="fixed">
-    <parent link="base_footprint"/>
-    <child link="base_link" />
-    <origin xyz="0 0 0.033" rpy="0 0 0"/>
-  </joint>
+  <!-- ^ Links Section -->
+  <!-- All link elements are grouped below -->
 
-  <link name="wheel_right_link">
+  <link name="wheel_left_link">
     <inertial>
-      <origin xyz="0 -0.014 0" rpy="0 0 0" />
-      <mass value="0.0530086090966721" />
-      <inertia ixx="1.88176298336665E-05" ixy="-4.8444933029987E-10" ixz="1.88163708851143E-08"
-               iyy="3.11510738647764E-05" iyz="-6.93560663069607E-11"
-               izz="1.8801969558182E-05" />
-    </inertial>
-    <visual>
-      <origin xyz="0 0 0" rpy="1.57 0 0" />
-      <geometry>
-        <mesh filename="package://sanad_description/meshes/wheel_right_link.STL" />
-      </geometry>
-      <material name="blue"/>
-    </visual>
-    <collision>
-      <origin xyz="0 -0.015 0" rpy="1.57 0 0" />
-      <geometry>
-        <sphere radius="0.033"/>
-      </geometry>
-    </collision>
-  </link>
-
-  <joint name="wheel_right_joint" type="continuous">
-    <origin xyz="0 -0.0701101849418637 0" rpy="0 0 0" />
-    <parent link="base_link" />
-    <child link="wheel_right_link" />
-    <axis xyz="0 1 0" />
-  </joint>
-  
-  <link
-    name="wheel_left_link">
-    <inertial>
-      <origin xyz="0 0.014 0" rpy="0 0 0" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
       <mass value="0.0530086043217644" />
       <inertia ixx="1.8792911368909E-05"  ixy="3.31256392204584E-10" ixz="-1.14082001662767E-08"
                iyy="3.11510738759073E-05" iyz="-3.60499245082192E-10"
                izz="1.88266886146847E-05" />
     </inertial>
     <visual>
-      <origin xyz="0 0 0" rpy="-1.57 0 0" />
+      <origin xyz="0 0 0" rpy="0 0 1.57" />
       <geometry>
-        <mesh filename="package://sanad_description/meshes/wheel_left_link.STL" />
+        <mesh filename="package://sanad_description/meshes/Back_wheel.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="blue"/>
     </visual>
     <collision>
-      <origin xyz="0 0.015 0" rpy="-1.57 0 0" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.033"/>
+        <sphere radius="0.15875"/>
       </geometry>
     </collision>
   </link>
 
-  <joint name="wheel_left_joint" type="continuous">
-    <origin xyz="0 0.0701101849418642 0" rpy="0 0 0" />
-    <parent link="base_link" />
-    <child link="wheel_left_link" />
-    <axis xyz="0 1 0" />
-  </joint>
+  <!-- wheel_left_joint moved to Joints section -->
+  <link
+    name="wheel_right_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.0530086043217644" />
+      <inertia ixx="1.8792911368909E-05"  ixy="3.31256392204584E-10" ixz="-1.14082001662767E-08"
+               iyy="3.11510738759073E-05" iyz="-3.60499245082192E-10"
+               izz="1.88266886146847E-05" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 1.57" />
+      <geometry>
+        <mesh filename="package://sanad_description/meshes/Back_wheel.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.15875"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- wheel_right_joint moved to Joints section -->
 
   <link name="caster_front_link">
     <inertial>
@@ -117,24 +103,19 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://sanad_description/meshes/caster_front_link.STL" />
+        <mesh filename="package://sanad_description/meshes/caster_wheel.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.005"/>
+        <sphere radius="0.08888"/>
       </geometry>
     </collision>
   </link>
 
-  <joint name="caster_front_joint" type="fixed">
-    <origin xyz="0.04755 0 -0.0275" rpy="0 0 0" />
-    <parent link="base_link" />
-    <child link="caster_front_link" />
-    <axis xyz="0 0 0" />
-  </joint>
+  <!-- caster_front_joint moved to Joints section -->
   
   <link name="caster_rear_link">
     <inertial>
@@ -147,24 +128,19 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://sanad_description/meshes/caster_rear_link.STL" />
+        <mesh filename="package://sanad_description/meshes/caster_wheel.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.005"/>
+        <sphere radius="0.08888"/>
       </geometry>
     </collision>
   </link>
 
-  <joint name="caster_rear_joint" type="fixed">
-    <origin xyz="-0.04755 0 -0.0275" rpy="0 0 0" />
-    <parent link="base_link" />
-    <child link="caster_rear_link" />
-    <axis xyz="0 0 0" />
-  </joint>
+  <!-- caster_rear_joint moved to Joints section -->
 
   <link name="imu_link">
     <inertial>
@@ -189,14 +165,34 @@
     </collision>
   </link>
   
-  <joint name="imu_joint" type="fixed">
-    <origin xyz="0 0 0.0698986241758014" rpy="0 0 0" />
-    <parent link="base_link" />
-    <child link="imu_link" />
-    <axis xyz="0 0 0" />
-  </joint>
+  <!-- imu_joint moved to Joints section -->
 
-  <link name="laser_link">
+  <link name="depth_camera_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.1" />
+      <inertia ixx="0.0001" ixy="0.0" ixz="0.0"
+               iyy="0.0001" iyz="0.0"
+               izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0.02 0.025 0.045" rpy="1.57 0 1.57" />
+      <geometry>
+        <mesh filename="package://sanad_description/meshes/astra.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://sanad_description/meshes/astra.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- depth_camera_joint moved to Joints section -->
+
+  <link name="laser_left_link">
     <inertial>
       <origin xyz="-0.011945780406062 -0.000381929217680526 -0.0170649378129477" rpy="0 0 0" />
       <mass value="0.073084435549317" />
@@ -218,11 +214,90 @@
       </geometry>
     </collision>
   </link>
+  <link name="laser_right_link">
+    <inertial>
+      <origin xyz="-0.011945780406062 -0.000381929217680526 -0.0170649378129477" rpy="0 0 0" />
+      <mass value="0.073084435549317" />
+      <inertia ixx="1.96074931730795E-05" ixy="-3.62091076640009E-07" ixz="4.28230084046735E-07"
+               iyy="2.40983835136327E-05" iyz="1.50180909250652E-08"
+               izz="4.14184164228595E-05" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://sanad_description/meshes/laser_link.STL" />
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://sanad_description/meshes/laser_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <!-- ^ Joints Section -->
+  <!-- All joint elements are grouped here -->
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link" />
+    <!-- ^Rotate base_link 180 degrees around Z so robot "front" is flipped -->
+    <origin xyz="0 0 0.533" rpy="0 0 0"/>
+  </joint>
 
-  <joint name="laser_joint" type="fixed">
-    <origin xyz="-0.0050526 -0.0023221 0.1208" rpy="0 0 3.14" />
+  <joint name="wheel_left_joint" type="continuous">
+    <origin xyz="-0.22 ${0.580/2} -0.37" rpy="0 0 0" />
     <parent link="base_link" />
-    <child link="laser_link" />
+    <child link="wheel_left_link" />
+    <axis xyz="0 1 0" />
+  </joint>
+
+  <joint name="wheel_right_joint" type="continuous">
+    <origin xyz="-0.22 -${0.580/2} -0.37" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="wheel_right_link" />
+    <axis xyz="0 1 0" />
+  </joint>
+
+  <joint name="caster_front_joint" type="fixed">
+    <origin xyz="0.32 -0.251 -0.44" rpy="1.57 1.57 0" />
+    <parent link="base_link" />
+    <child link="caster_front_link" />
+    <axis xyz="0 0 0" />
+  </joint>
+
+  <joint name="caster_rear_joint" type="fixed">
+    <origin xyz="0.32 0.251 -0.44" rpy="1.57 1.57 0" />
+    <parent link="base_link" />
+    <child link="caster_rear_link" />
+    <axis xyz="0 0 0" />
+  </joint>
+
+  <joint name="imu_joint" type="fixed">
+    <origin xyz="0 0 0.0698986241758014" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="imu_link" />
+    <axis xyz="0 0 0" />
+  </joint>
+
+  <joint name="depth_camera_joint" type="fixed">
+    <origin xyz="0.32 0.245 0.18" rpy="3.14 3.14 0" />
+    <parent link="base_link" />
+    <child link="depth_camera_link" />
+    <axis xyz="0 0 0" />
+  </joint>
+
+  <joint name="laser_left_joint" type="fixed">
+    <origin xyz="0.265 ${(0.245 +0.1)} -0.2" rpy="0 0 ${1.57 + 3.14}" />
+    <parent link="base_link" />
+    <child link="laser_left_link" />
+    <axis xyz="0 0 0" />
+  </joint>
+
+  <joint name="laser_right_joint" type="fixed">
+    <origin xyz="0.265 -${(0.245 +0.1)} -0.2" rpy="0 0 3.14" />
+    <parent link="base_link" />
+    <child link="laser_right_link" />
     <axis xyz="0 0 0" />
   </joint>
 
