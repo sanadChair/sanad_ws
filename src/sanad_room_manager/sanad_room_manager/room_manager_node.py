@@ -14,6 +14,7 @@ sanad_room_manager_pkg = get_package_share_directory("sanad_room_manager")
 class RoomManagerNode(Node):
     def __init__(self):
         super().__init__("room_manager_node")
+        self.declare_parameter("use_sim_time", False)
         self.rooms_yaml_path = self._resolve_rooms_yaml_path()
         self.rooms_dict = self._load_rooms_dict()
         self.get_srv = self.create_service(GetRoom, "rooms/get", self.callback_get)

@@ -1,6 +1,7 @@
 import os
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
@@ -41,10 +42,22 @@ def generate_launch_description():
         package="bumperbot_firmware",
         executable="mpu6050_driver.py"
     )
+
+    room_manager = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("sanad_room_manager"),
+                "launch",
+                "room_manager.launch.py",
+            )
+        ),
+        launch_arguments={"use_sim_time": "false"}.items(),
+    )
     
     return LaunchDescription([
         hardware_interface,
         controller,
         joystick,
         imu_driver_node,
+        room_manager,
     ])

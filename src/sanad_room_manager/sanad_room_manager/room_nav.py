@@ -24,6 +24,7 @@ class RoomNavNode(Node):
     def __init__(self):
         super().__init__("room_nav_node")
         self.callback_group = ReentrantCallbackGroup()
+        self.declare_parameter("use_sim_time", False)
         self.rooms_yaml_path = self._resolve_rooms_yaml_path()
         self.rooms_dict = self._load_rooms_dict()
         self.nav_client = ActionClient(
