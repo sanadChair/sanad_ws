@@ -1,0 +1,22 @@
+kitchen:
+  coordinates:
+    min_x: 0.0
+    max_x: 5.0
+    min_y: 0.0
+    max_y: 5.0
+    theta: 0.0
+    pose:
+      x: 6.558255195617676
+      y: -2.977426767349243
+      theta: 0.0
+living_room:
+  coordinates:
+    min_x: 5.0
+    max_x: 10.0
+    min_y: 0.0
+    max_y: 5.0
+    theta: 0.0
+    pose:
+      x: 0.8284147381782532
+      y: -0.6738091707229614
+      theta: 0.0

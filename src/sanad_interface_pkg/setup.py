@@ -1,3 +1,4 @@
+from glob import glob
 from setuptools import find_packages, setup
 
 package_name = "sanad_interface_pkg"
@@ -9,11 +10,12 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
+        ("share/" + package_name + "/srv", glob("srv/*.srv")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="youssef",
-    maintainer_email="yousefkamel282@gmail.com",
+    maintainer="youssef, zero",
+    maintainer_email="yousefkamel282@gmail.com, mohmed.ayman11@gmail.com",
     description="TODO: Package description",
     license="TODO: License declaration",
     extras_require={

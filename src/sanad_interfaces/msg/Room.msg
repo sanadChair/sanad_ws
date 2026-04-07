@@ -1,0 +1,9 @@
+string room_name
+float64 min_x
+float64 max_x
+float64 min_y
+float64 max_y
+float64 theta
+float64 pose_x
+float64 pose_y
+float64 pose_theta
