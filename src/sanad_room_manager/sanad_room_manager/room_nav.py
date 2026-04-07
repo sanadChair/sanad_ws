@@ -125,12 +125,16 @@ class RoomNavNode(Node):
         room = self.rooms_dict.get(room_name)
         if room is None:
             response.success = False
-            self.get_logger().warn(f"Navigate request failed: room '{room_name}' not found")
+            self.get_logger().warn(
+                f"Navigate request failed: room '{room_name}' not found"
+            )
             return response
 
         if not self.nav_client.wait_for_server(timeout_sec=5.0):
             response.success = False
-            self.get_logger().error("Nav2 action server 'navigate_to_pose' is not available")
+            self.get_logger().error(
+                "Nav2 action server 'navigate_to_pose' is not available"
+            )
             return response
 
         goal = NavigateToPose.Goal()
@@ -154,7 +158,9 @@ class RoomNavNode(Node):
             return response
 
         if result.result and result.status == GoalStatus.STATUS_SUCCEEDED:
-            self.get_logger().info(f"Navigation to room '{room_name}' completed successfully")
+            self.get_logger().info(
+                f"Navigation to room '{room_name}' completed successfully"
+            )
             response.success = True
             return response
 
