@@ -11,37 +11,32 @@ def generate_launch_description():
         os.path.join(
             get_package_share_directory("bumperbot_firmware"),
             "launch",
-            "hardware_interface.launch.py"
+            "hardware_interface.launch.py",
         ),
     )
-    
+
     controller = IncludeLaunchDescription(
         os.path.join(
             get_package_share_directory("bumperbot_controller"),
             "launch",
-            "controller.launch.py"
+            "controller.launch.py",
         ),
         launch_arguments={
             "use_simple_controller": "False",
-            "use_python": "False"
+            "use_python": "False",
         }.items(),
     )
-    
+
     joystick = IncludeLaunchDescription(
         os.path.join(
             get_package_share_directory("bumperbot_controller"),
             "launch",
-            "joystick_teleop.launch.py"
+            "joystick_teleop.launch.py",
         ),
-        launch_arguments={
-            "use_sim_time": "False"
-        }.items()
+        launch_arguments={"use_sim_time": "False"}.items(),
     )
 
-    imu_driver_node = Node(
-        package="bumperbot_firmware",
-        executable="mpu6050_driver.py"
-    )
+    imu_driver_node = Node(package="bumperbot_firmware", executable="mpu6050_driver.py")
 
     room_manager = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -53,11 +48,13 @@ def generate_launch_description():
         ),
         launch_arguments={"use_sim_time": "false"}.items(),
     )
-    
-    return LaunchDescription([
-        hardware_interface,
-        controller,
-        joystick,
-        imu_driver_node,
-        room_manager,
-    ])
+
+    return LaunchDescription(
+        [
+            hardware_interface,
+            controller,
+            joystick,
+            imu_driver_node,
+            room_manager,
+        ]
+    )
