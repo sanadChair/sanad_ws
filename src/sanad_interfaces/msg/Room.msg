@@ -7,3 +7,4 @@ float64 theta
 float64 pose_x
 float64 pose_y
 float64 pose_theta
+sanad_interfaces/Device[] devices

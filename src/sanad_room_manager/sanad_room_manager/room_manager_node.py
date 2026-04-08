@@ -2,7 +2,7 @@
 import os
 import yaml
 from ament_index_python import get_package_share_directory
-from sanad_interfaces.msg import Room
+from sanad_interfaces.msg import Device, Room
 from sanad_interfaces.srv import AddRoom, DeleteRoom, GetAllRooms, GetRoom, UpdateRoom
 import rclpy
 from rclpy.node import Node
@@ -14,7 +14,6 @@ sanad_room_manager_pkg = get_package_share_directory("sanad_room_manager")
 class RoomManagerNode(Node):
     def __init__(self):
         super().__init__("room_manager_node")
-        self.declare_parameter("use_sim_time", False)
         self.rooms_yaml_path = self._resolve_rooms_yaml_path()
         self.rooms_dict = self._load_rooms_dict()
         self.get_srv = self.create_service(GetRoom, "rooms/get", self.callback_get)
@@ -88,8 +87,42 @@ class RoomManagerNode(Node):
                     "y": float(room.pose_y),
                     "theta": float(room.pose_theta),
                 },
-            }
+            },
+            "devices": [self._device_to_yaml_entry(device) for device in room.devices],
         }
+
+    def _device_to_yaml_entry(self, device: Device):
+        return {
+            "id": str(device.id),
+            "name": str(device.name),
+            "type": str(device.type),
+            "action": [str(item) for item in device.action],
+            "state_keys": [str(item) for item in device.state_keys],
+            "state_values": [str(item) for item in device.state_values],
+        }
+
+    def _build_device_msg(self, device_entry: dict) -> Device:
+        device = Device()
+        device.id = str(device_entry.get("id", ""))
+        device.name = str(device_entry.get("name", ""))
+        device.type = str(device_entry.get("type", ""))
+
+        action = device_entry.get("action", [])
+        state_keys = device_entry.get("state_keys", [])
+        state_values = device_entry.get("state_values", [])
+
+        device.action = (
+            [str(item) for item in action] if isinstance(action, list) else []
+        )
+        device.state_keys = (
+            [str(item) for item in state_keys] if isinstance(state_keys, list) else []
+        )
+        device.state_values = (
+            [str(item) for item in state_values]
+            if isinstance(state_values, list)
+            else []
+        )
+        return device
 
     def _persist_rooms_yaml(self):
         serialized_rooms = {}
@@ -114,6 +147,7 @@ class RoomManagerNode(Node):
     def _build_room_msg(self, room_name: str, room_entry: dict) -> Room:
         coordinates = room_entry.get("coordinates", {})
         pose = coordinates.get("pose", {})
+        devices = room_entry.get("devices", [])
 
         room = Room()
         room.room_name = room_name
@@ -125,6 +159,12 @@ class RoomManagerNode(Node):
         room.pose_x = float(pose.get("x", 0.0))
         room.pose_y = float(pose.get("y", 0.0))
         room.pose_theta = float(pose.get("theta", 0.0))
+        if isinstance(devices, list):
+            room.devices = [
+                self._build_device_msg(device_entry)
+                for device_entry in devices
+                if isinstance(device_entry, dict)
+            ]
         return room
 
     def callback_get(self, request: GetRoom.Request, response: GetRoom.Response):
@@ -173,6 +213,7 @@ class RoomManagerNode(Node):
         cached_room.pose_x = float(room.pose_x)
         cached_room.pose_y = float(room.pose_y)
         cached_room.pose_theta = float(room.pose_theta)
+        cached_room.devices = room.devices
 
         self.rooms_dict[room_name] = cached_room
         if not self._persist_rooms_yaml():
@@ -213,6 +254,7 @@ class RoomManagerNode(Node):
         cached_room.pose_x = float(room.pose_x)
         cached_room.pose_y = float(room.pose_y)
         cached_room.pose_theta = float(room.pose_theta)
+        cached_room.devices = room.devices
 
         self.rooms_dict[room_name] = cached_room
         if not self._persist_rooms_yaml():

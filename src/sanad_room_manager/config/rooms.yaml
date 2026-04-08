@@ -9,6 +9,19 @@ kitchen:
       x: 6.558255195617676
       y: -2.977426767349243
       theta: 0.0
+  devices:
+    - id: kitchen_light_1
+      name: Kitchen Main Light
+      type: light
+      action: [turn_on, turn_off, set_brightness]
+      state_keys: [power, brightness]
+      state_values: [off, "70"]
+    - id: kitchen_thermostat_1
+      name: Kitchen Thermostat
+      type: thermostat
+      action: [set_temperature, turn_on, turn_off]
+      state_keys: [power, temperature]
+      state_values: [on, "24"]
 living_room:
   coordinates:
     min_x: 5.0
@@ -20,3 +33,22 @@ living_room:
       x: 0.8284147381782532
       y: -0.6738091707229614
       theta: 0.0
+  devices:
+    - id: living_room_light_1
+      name: Living Room Light
+      type: light
+      action: [turn_on, turn_off, set_brightness]
+      state_keys: [power, brightness]
+      state_values: [on, "60"]
+    - id: living_room_ac_1
+      name: Living Room AC
+      type: air_conditioner
+      action: [turn_on, turn_off, set_temperature, set_mode]
+      state_keys: [power, temperature, mode]
+      state_values: [off, "22", cool]
+    - id: living_room_tv_1
+      name: Living Room TV
+      type: tv
+      action: [turn_on, turn_off, set_channel, set_volume]
+      state_keys: [power, channel, volume]
+      state_values: [off, "5", "15"]
