@@ -85,6 +85,11 @@ def generate_launch_description():
                 "rviz",
                 "nav2_default_view.rviz",
             ),
+            os.path.join(
+                get_package_share_directory("nav2_bringup"),
+                "rviz",
+                "nav2_default_view.rviz",
+            ),
         ],
         output="screen",
         parameters=[{"use_sim_time": True}],
