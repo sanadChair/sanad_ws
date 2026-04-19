@@ -2,6 +2,7 @@ import os
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.conditions import IfCondition, UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
@@ -63,11 +64,27 @@ def generate_launch_description():
         ),
     )
 
+    room_manager = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("sanad_room_manager"),
+                "launch",
+                "room_manager.launch.py",
+            )
+        ),
+        launch_arguments={"use_sim_time": "true"}.items(),
+    )
+
     rviz = Node(
         package="rviz2",
         executable="rviz2",
         arguments=[
             "-d",
+            os.path.join(
+                get_package_share_directory("nav2_bringup"),
+                "rviz",
+                "nav2_default_view.rviz",
+            ),
             os.path.join(
                 get_package_share_directory("nav2_bringup"),
                 "rviz",
@@ -88,6 +105,7 @@ def generate_launch_description():
             localization,
             slam,
             navigation,
+            room_manager,
             rviz,
         ]
     )

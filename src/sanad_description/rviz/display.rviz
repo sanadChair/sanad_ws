@@ -80,22 +80,14 @@ Visualization Manager:
       Tree:
         base_footprint:
           base_link:
-            caster_front_link:
-              {}
-            caster_rear_link:
-              {}
-            imu_link:
-              {}
-            laser_link:
-              {}
-            wheel_left_link:
-              {}
-            wheel_right_link:
-              {}
-        map:
-          {}
-        odom:
-          {}
+            caster_front_link: {}
+            caster_rear_link: {}
+            imu_link: {}
+            laser_link: {}
+            wheel_left_link: {}
+            wheel_right_link: {}
+        map: {}
+        odom: {}
       Update Interval: 0
       Value: true
     - Alpha: 1
