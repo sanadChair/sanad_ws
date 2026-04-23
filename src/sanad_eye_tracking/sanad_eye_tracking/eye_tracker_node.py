@@ -101,8 +101,8 @@ class EyeTrackerNode(Node):
         # ── Parameters ──────────────────────────────────────────────
         self.declare_parameter("camera_index", 0)
         self.declare_parameter("publish_rate", 30.0)
-        self.declare_parameter("gaze_horizontal_threshold", 0.015)
-        self.declare_parameter("gaze_vertical_threshold", 0.012)
+        self.declare_parameter("gaze_horizontal_threshold", 0.035)
+        self.declare_parameter("gaze_vertical_threshold", 0.030)
         self.declare_parameter("ear_threshold", 0.20)
         self.declare_parameter("show_debug_window", True)
         self.declare_parameter("model_path", "")

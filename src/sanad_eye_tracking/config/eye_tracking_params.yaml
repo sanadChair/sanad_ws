@@ -11,10 +11,13 @@ sanad_eye_tracking:
       publish_rate: 30.0
 
       # --- Gaze thresholds (normalised iris offset) ---
+      # These define the size of the "center" dead zone.
+      # Values are ~doubled from defaults to give a comfortable center
+      # area for the "click" action without accidentally triggering moves.
       # Horizontal: negative = left / positive = right
-      gaze_horizontal_threshold: 0.015
+      gaze_horizontal_threshold: 0.035
       # Vertical:   negative = up   / positive = down
-      gaze_vertical_threshold: 0.012
+      gaze_vertical_threshold: 0.030
 
       # --- Blink / eye-closed detection ---
       # Eye-aspect-ratio below this value counts as "closed"
@@ -25,20 +28,14 @@ sanad_eye_tracking:
 
   gaze_controller:
     ros__parameters:
-      # Seconds the gaze must stay in one direction to trigger a move
+      # Seconds the gaze must stay in one cardinal direction to trigger a move
       direction_hold_time: 3.0
+
+      # Seconds the gaze must stay at center to trigger a "click"
+      center_hold_time: 3.0
 
       # Seconds both eyes must stay closed to trigger "go back"
       close_hold_time: 3.0
-
-      # Maximum interval (s) between blinks to count as consecutive
-      double_blink_max_interval: 0.6
-
-      # Minimum interval (s) – ignore noise / single long blink
-      double_blink_min_interval: 0.15
-
-      # Number of consecutive blinks needed to trigger a "click"
-      blink_count_for_click: 3
 
       # Cooldown (s) between any two commands to prevent spam
       command_cooldown: 1.0

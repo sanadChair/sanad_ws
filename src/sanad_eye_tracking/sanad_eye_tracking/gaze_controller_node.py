@@ -15,7 +15,7 @@ Publishes
       • "move_south"  – gaze held south  …
       • "move_east"   – gaze held east   …
       • "move_west"   – gaze held west   …
-      • "click"       – user triple-blinked (3 blinks)
+      • "click"       – gaze held at center for `center_hold_time` seconds
       • "go_back"     – user closed eyes for `close_hold_time` seconds
 
 /eye_tracking/grid_position  (std_msgs/String)
@@ -23,9 +23,10 @@ Publishes
 
 Logic
 -----
-1. Direction hold:   If gaze stays in one cardinal direction for 3 s
+1. Direction hold:   If gaze stays in a cardinal direction for 3 s
                      continuously → emit move_* and shift grid cursor.
-2. Triple-blink:     Three blink events within 0.15–0.6 s each → emit "click".
+2. Center hold:      If gaze stays at center for 3 s → emit "click"
+                     (select the currently highlighted window).
 3. Eyes closed 3 s:  Continuous "closed" state for 3 s → emit "go_back".
 4. Cooldown:         1 s idle between any two commands to prevent spam.
 """
@@ -38,29 +39,25 @@ from std_msgs.msg import String
 
 
 class GazeControllerNode(Node):
-    """State machine that interprets gaze stream and blink events."""
+    """State machine that interprets gaze stream and eye events."""
 
     def __init__(self):
         super().__init__("gaze_controller")
 
         # ── Parameters ──────────────────────────────────────────────
         self.declare_parameter("direction_hold_time", 3.0)
+        self.declare_parameter("center_hold_time", 3.0)
         self.declare_parameter("close_hold_time", 3.0)
-        self.declare_parameter("double_blink_max_interval", 0.6)
-        self.declare_parameter("double_blink_min_interval", 0.15)
+        self.declare_parameter("command_cooldown", 1.0)
         self.declare_parameter("grid_rows", 3)
         self.declare_parameter("grid_cols", 3)
-        self.declare_parameter("blink_count_for_click", 3)
-        self.declare_parameter("command_cooldown", 1.0)
 
         self.dir_hold       = self.get_parameter("direction_hold_time").value
+        self.center_hold    = self.get_parameter("center_hold_time").value
         self.close_hold     = self.get_parameter("close_hold_time").value
-        self.db_max         = self.get_parameter("double_blink_max_interval").value
-        self.db_min         = self.get_parameter("double_blink_min_interval").value
+        self.cmd_cooldown   = self.get_parameter("command_cooldown").value
         self.grid_rows      = self.get_parameter("grid_rows").value
         self.grid_cols      = self.get_parameter("grid_cols").value
-        self.blink_target   = self.get_parameter("blink_count_for_click").value
-        self.cmd_cooldown   = self.get_parameter("command_cooldown").value
 
         # ── Subscribers ─────────────────────────────────────────────
         self.create_subscription(String, "/eye_tracking/gaze_direction",
@@ -81,10 +78,6 @@ class GazeControllerNode(Node):
         self._close_start_time = None
         self._close_triggered = False
 
-        # ── Blink detection ─────────────────────────────────────────
-        self._last_blink_time = 0.0
-        self._blink_count = 0
-
         # ── Command cooldown ────────────────────────────────────────
         self._last_command_time = 0.0
 
@@ -103,7 +96,11 @@ class GazeControllerNode(Node):
     # ================================================================
 
     def _gaze_cb(self, msg: String):
-        """Handle gaze direction updates."""
+        """Handle gaze direction updates.
+
+        • Cardinal direction held for `direction_hold_time` → move
+        • Center held for `center_hold_time` → click
+        """
         direction = msg.data  # "north", "south", "east", "west", "center"
         now = time.time()
 
@@ -115,34 +112,28 @@ class GazeControllerNode(Node):
             return
 
         # Same direction – check if we've been holding long enough
-        if direction == "center" or self._dir_triggered:
+        if self._dir_triggered:
             return
 
         elapsed = now - self._dir_start_time
-        if elapsed >= self.dir_hold:
-            self._dir_triggered = True
-            self._handle_direction_move(direction)
+
+        if direction == "center":
+            # ── Center hold → click ─────────────────────────────────
+            if elapsed >= self.center_hold:
+                self._dir_triggered = True
+                if self._emit_command("click"):
+                    self.get_logger().info("👆  Center hold 3 s → CLICK")
+        else:
+            # ── Cardinal direction hold → move ──────────────────────
+            if elapsed >= self.dir_hold:
+                self._dir_triggered = True
+                self._handle_direction_move(direction)
 
     # ----------------------------------------------------------------
     def _eye_cb(self, msg: String):
         """Handle eye state updates (open / blink / closed)."""
         state = msg.data
         now = time.time()
-
-        # ── Blink detection (triple-blink → click) ─────────────────
-        if state == "blink":
-            gap = now - self._last_blink_time
-            self._last_blink_time = now
-
-            if self.db_min <= gap <= self.db_max:
-                self._blink_count += 1
-            else:
-                self._blink_count = 1
-
-            if self._blink_count >= self.blink_target:
-                self._blink_count = 0
-                if self._emit_command("click"):
-                    self.get_logger().info("👆  Triple-blink → CLICK")
 
         # ── Prolonged closure detection (go_back) ───────────────────
         if state == "closed":
