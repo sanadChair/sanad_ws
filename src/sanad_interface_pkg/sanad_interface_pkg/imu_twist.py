@@ -79,9 +79,7 @@ class ImuToCmdVel(Node):
             self.calib_sum_ay += ay
             self.calib_samples += 1
 
-            elapsed_sec = (
-                now - self.calibration_start_time
-            ).nanoseconds * 1e-9
+            elapsed_sec = (now - self.calibration_start_time).nanoseconds * 1e-9
 
             # Hold robot still during baseline capture.
             self.pub.publish(Twist())
