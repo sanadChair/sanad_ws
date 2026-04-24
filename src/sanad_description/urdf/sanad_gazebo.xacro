@@ -156,7 +156,7 @@
     <sensor name="lidar_right" type="gpu_lidar">
       <always_on>true</always_on>
       <visualize>true</visualize>
-      <topic>scan_rear</topic>
+      <topic>scan_right</topic>
       <update_rate>5</update_rate>
       <gz_frame_id>laser_right_link</gz_frame_id>
       <lidar>
@@ -187,7 +187,7 @@
     <sensor name="lidar_left" type="gpu_lidar">
       <always_on>true</always_on>
       <visualize>true</visualize>
-      <topic>scan</topic>
+      <topic>scan_left</topic>
       <update_rate>5</update_rate>
       <gz_frame_id>laser_left_link</gz_frame_id>
       <lidar>

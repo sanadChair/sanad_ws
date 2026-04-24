@@ -101,7 +101,7 @@ def generate_launch_description():
             {"autostart": True},
         ],
     )
-    front_filter = Node(
+    laser_left_filter = Node(
         package="laser_filters",
         executable="scan_to_scan_filter_chain",
         parameters=[
@@ -109,17 +109,18 @@ def generate_launch_description():
                 [
                     get_package_share_directory("sanad_navigation"),
                     "config",
-                    "laser_filter.yaml",
+                    "laser_left_filter.yaml",
                 ]
             )
         ],
+        ## ! could cause error
         remappings=[
-            ("scan", "/scan"),
-            ("scan_filtered", "/scan_front_filtered"),
+            ("scan", "/scan_left"),
+            ("scan_filtered", "/scan_left_filtered"),
         ],
     )
 
-    rear_filter = Node(
+    laser_right_filter = Node(
         package="laser_filters",
         executable="scan_to_scan_filter_chain",
         parameters=[
@@ -127,13 +128,29 @@ def generate_launch_description():
                 [
                     get_package_share_directory("sanad_navigation"),
                     "config",
-                    "rear_laser_filter.yaml",
+                    "laser_right_filter.yaml",
                 ]
             )
         ],
         remappings=[
-            ("scan", "/scan_rear"),  # input
-            ("scan_filtered", "/scan_rear_filtered"),  # output
+            ("scan", "/scan_right"),  # input
+            ("scan_filtered", "/scan_right_filtered"),  # output
+        ],
+    )
+
+    dual_laser_merger_node = Node(
+        package="dual_laser_merger",
+        executable="dual_laser_merger_node",
+        name="dual_laser_merger",
+        output="screen",
+        parameters=[
+            {
+                "laser_1_topic": "/scan_left_filtered",
+                "laser_2_topic": "/scan_right_filtered",
+                "merged_scan_topic": "/scan",
+                # "publish_rate": 100,
+                "target_frame": "base_link",
+            }
         ],
     )
 
@@ -146,7 +163,8 @@ def generate_launch_description():
             nav2_bt_navigator,
             nav2_behavior,
             nav2_lifecycle_manager,
-            front_filter,
-            rear_filter,
+            laser_left_filter,
+            laser_right_filter,
+            dual_laser_merger_node,
         ]
     )
