@@ -113,7 +113,6 @@ def generate_launch_description():
                 ]
             )
         ],
-        ## ! could cause error
         remappings=[
             ("scan", "/scan_left"),
             ("scan_filtered", "/scan_left_filtered"),
@@ -138,70 +137,13 @@ def generate_launch_description():
         ],
     )
 
-    # dual_laser_merger_node = Node(
-    #     package="ros2_laser_scan_merger",
-    #     executable="ros2_laser_scan_merger",
-    #     name="laser_scan_merger",
-    #     parameters=[
-    #         {
-    #             "laser1_topic": "/scan_left_filtered",
-    #             "laser2_topic": "/scan_right_filtered",
-    #             "destination_frame": "base_link",
-    #             "merged_topic": "/scan",
-    #             "range_min": 0.1,
-    #             "range_max": 30.0,
-    #         }
-    #     ],
-    # )
-    lidar_merger = IncludeLaunchDescription(
+    slam_mapping = IncludeLaunchDescription(
         os.path.join(
-            get_package_share_directory("ros2_laser_scan_merger"),
+            get_package_share_directory("sanad_mapping"),
             "launch",
-            "laser_scan_merger.launch.py",
+            "slam.launch.py",
         ),
     )
-
-    # dual_laser_merger_node = ComposableNodeContainer(
-    #     name="demo_container",
-    #     namespace="",
-    #     package="rclcpp_components",
-    #     executable="component_container",
-    #     composable_node_descriptions=[
-    #         ComposableNode(
-    #             package="dual_laser_merger",
-    #             plugin="merger_node::MergerNode",
-    #             name="dual_laser_merger",
-    #             parameters=[
-    #                 {"laser_1_topic": "/scan_left_filtered"},
-    #                 {"laser_2_topic": "/scan_right_filtered"},
-    #                 {"merged_scan_topic": "/scan"},
-    #                 {"target_frame": "base_link"},
-    #                 {"laser_1_x_offset": 0.0},
-    #                 {"laser_1_y_offset": 0.0},
-    #                 {"laser_1_yaw_offset": 0.0},
-    #                 {"laser_2_x_offset": 0.0},
-    #                 {"laser_2_y_offset": 0.0},
-    #                 {"laser_2_yaw_offset": 0.0},
-    #                 {"tolerance": 0.01},
-    #                 {"queue_size": 5},
-    #                 {"angle_increment": 0.001},
-    #                 {"scan_time": 0.067},
-    #                 {"range_min": 0.01},
-    #                 {"range_max": 25.0},
-    #                 {"min_height": -1.0},
-    #                 {"max_height": 1.0},
-    #                 {"angle_min": -3.141592654},
-    #                 {"angle_max": 3.141592654},
-    #                 {"inf_epsilon": 1.0},
-    #                 {"use_inf": True},
-    #                 {"allowed_radius": 0.45},
-    #                 {"enable_shadow_filter": False},
-    #                 {"enable_average_filter": False},
-    #             ],
-    #         )
-    #     ],
-    #     output="screen",
-    # )
 
     dual_laser_merger_node = Node(
         package="dual_laser_merger",
@@ -222,9 +164,9 @@ def generate_launch_description():
             nav2_bt_navigator,
             nav2_behavior,
             nav2_lifecycle_manager,
+            # slam_mapping,
             laser_left_filter,
             laser_right_filter,
-            # lidar_merger,
             dual_laser_merger_node,
         ]
     )

@@ -41,6 +41,7 @@ global_costmap:
         enabled: True
         # scan_right_filtered:
         # observation_sources: scan_left_filtered scan_right_filtered
+        observation_sources: scan
         scan:
           topic: /scan
           max_obstacle_height: 2.0
