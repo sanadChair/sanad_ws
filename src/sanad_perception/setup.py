@@ -23,7 +23,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "lidar_merger     = sanad_perception.lidar_merger:main",
+            # "lidar_merger    = sanad_perception.lidar_merger:main",
             "lidar_detector  = sanad_perception.lidar_cluster_detector:main",
             "yolo_detector   = sanad_perception.yolo_depth_detector:main",
             "tracker         = sanad_perception.tracker_node:main",
