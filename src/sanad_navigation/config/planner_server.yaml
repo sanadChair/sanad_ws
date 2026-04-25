@@ -39,9 +39,10 @@ global_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: scan_left_filtered scan_right_filtered
-        scan_left_filtered:
-          topic: /scan_left_filtered
+        # scan_right_filtered:
+        # observation_sources: scan_left_filtered scan_right_filtered
+        scan:
+          topic: /scan
           max_obstacle_height: 2.0
           clearing: True
           marking: True
@@ -50,16 +51,27 @@ global_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
           obstacle_min_range: 0.0
-        scan_right_filtered:
-          topic: /scan_right_filtered
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
+        # observation_sources: scan_left_filtered scan_right_filtered
+        # scan_left_filtered:
+        #   topic: /scan_left_filtered
+        #   max_obstacle_height: 2.0
+        #   clearing: True
+        #   marking: True
+        #   data_type: "LaserScan"
+        #   raytrace_max_range: 3.0
+        #   raytrace_min_range: 0.0
+        #   obstacle_max_range: 2.5
+        #   obstacle_min_range: 0.0
+        # scan_right_filtered:
+        #   topic: /scan_right_filtered
+        #   max_obstacle_height: 2.0
+        #   clearing: True
+        #   marking: True
+        #   data_type: "LaserScan"
+        #   raytrace_max_range: 3.0
+        #   raytrace_min_range: 0.0
+        #   obstacle_max_range: 2.5
+        #   obstacle_min_range: 0.0
 
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
