@@ -53,6 +53,42 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
+### 4. Install Rosbridge Runtime Dependencies
+
+Install the ROS packages required by the new WebSocket bridge:
+
+```bash
+sudo apt update
+sudo apt install ros-$ROS_DISTRO-rosbridge-server ros-$ROS_DISTRO-rosapi
+```
+
+If you plan to expose the socket to the internet for free, install an SSH client on the same machine that runs the robot or the simulation, because that machine is the one serving the local rosbridge endpoint on `localhost:9090`.
+
+On Linux, OpenSSH is usually already available. Verify it with:
+
+```bash
+ssh -V
+```
+
+If it is missing on Debian or Ubuntu:
+
+```bash
+sudo apt update
+sudo apt install openssh-client
+```
+
+On Windows 10/11, OpenSSH client is often already installed. Verify it with:
+
+```powershell
+ssh -V
+```
+
+If it is missing, install the built-in Windows capability:
+
+```powershell
+Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+```
+
 **Tip:** To always source the workspace on new terminals:
 
 ```bash
@@ -81,6 +117,73 @@ To use a different world:
 ```bash
 ros2 launch sanad_bringup sanad_gazebo.launch.py world_name:=empty
 ```
+
+### Rosbridge WebSocket
+
+Simulation bringup now starts rosbridge by default so remote clients can access ROS over WebSocket:
+
+```bash
+ros2 launch sanad_bringup simulated_robot.launch.py
+```
+
+The default local endpoint is:
+
+```text
+ws://<robot-host>:9090
+```
+
+You can disable rosbridge or override its socket at launch time:
+
+```bash
+ros2 launch sanad_bringup simulated_robot.launch.py enable_rosbridge:=false
+ros2 launch sanad_bringup simulated_robot.launch.py rosbridge_host:=127.0.0.1 rosbridge_port:=9091
+```
+
+For a real robot setup, run rosbridge independently from the currently broken `real_robot.launch.py` flow:
+
+```bash
+ros2 launch sanad_bringup real_robot_rosbridge.launch.py
+```
+
+The first version exposes the upstream `rosbridge_websocket` surface, including topic access plus the broader rosbridge protocol features available through `rosbridge_server` and `rosapi`.
+
+### Pinggy Tunnel
+
+To expose rosbridge to the internet with Pinggy's free tier, run a TCP tunnel from the same machine that is running rosbridge:
+
+```bash
+ssh -p 443 -R0:localhost:9090 free.pinggy.io
+```
+
+Windows `cmd` or PowerShell uses the same command:
+
+```powershell
+ssh -p 443 -R0:localhost:9090 free.pinggy.io
+```
+
+If Pinggy prompts for confirmation, answer `yes`. If it prompts for a password in the free flow, press Enter.
+
+Checked-in examples are available at:
+
+- `src/sanad_bringup/config/pinggy-rosbridge.sh.example`
+- `src/sanad_bringup/config/pinggy-rosbridge.bat.example`
+
+After the tunnel starts, Pinggy prints a public address. For TCP tunnels, the public address is a host and port pair that forwards traffic to local rosbridge on `9090`.
+
+Clients then connect to the Pinggy-provided host and port using WebSocket.
+
+Important free-tier limitations:
+
+1. The free plan times out after 60 minutes.
+2. The public address changes when you restart the tunnel.
+3. Persistent domains and longer-running tunnels require a paid Pinggy plan.
+
+If your client requires a stable public URL for long-term deployment, Pinggy free tier is suitable for testing but not for a permanent production endpoint.
+
+Official Pinggy docs:
+- https://pinggy.io/docs/
+- https://pinggy.io/docs/tcp_tunnels/
+- https://pinggy.io/
 
 ### 2. Real Hardware
 
