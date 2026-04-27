@@ -112,6 +112,18 @@ Launch the robot in Gazebo (loads the `small_house` world by default). The syste
     ros2 launch sanad_bringup simulated_robot.launch.py use_slam:=true
     ```
 
+* **Headless Localization Mode:** Run the full simulation stack without opening RViz or the Gazebo GUI.
+    ```bash
+    ros2 launch sanad_bringup simulated_robot.launch.py headless:=true
+    ```
+
+* **Headless Mapping Mode:** Run SLAM without opening RViz or the Gazebo GUI.
+    ```bash
+    ros2 launch sanad_bringup simulated_robot.launch.py use_slam:=true headless:=true
+    ```
+
+Headless mode keeps Gazebo physics, sensor bridges, controllers, localization or SLAM, navigation, room management, and rosbridge active. It only suppresses desktop visualization windows.
+
 To use a different world:
 
 ```bash

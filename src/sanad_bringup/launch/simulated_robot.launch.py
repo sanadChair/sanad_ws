@@ -5,14 +5,26 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
+    headless = LaunchConfiguration("headless")
+    use_rviz = LaunchConfiguration("use_rviz")
     use_slam = LaunchConfiguration("use_slam")
     enable_rosbridge = LaunchConfiguration("enable_rosbridge")
 
+    headless_arg = DeclareLaunchArgument(
+        "headless",
+        default_value="false",
+        description="Run the simulator without RViz or the Gazebo GUI.",
+    )
+    use_rviz_arg = DeclareLaunchArgument(
+        "use_rviz",
+        default_value="true",
+        description="Start RViz when not running in headless mode.",
+    )
     use_slam_arg = DeclareLaunchArgument("use_slam", default_value="false")
     world_arg = DeclareLaunchArgument(
         name="world",
@@ -48,7 +60,15 @@ def generate_launch_description():
                 "gazebo.launch.py",
             )
         ),
-        launch_arguments={"world": LaunchConfiguration("world")}.items(),
+        launch_arguments={
+            "world": LaunchConfiguration("world"),
+            "use_gz_gui": PythonExpression(
+                ["'false' if '", headless, "' == 'true' else 'true'"]
+            ),
+            "gz_headless_rendering": PythonExpression(
+                ["'true' if '", headless, "' == 'true' else 'false'"]
+            ),
+        }.items(),
     )
 
     controller = IncludeLaunchDescription(
@@ -139,10 +159,17 @@ def generate_launch_description():
         ],
         output="screen",
         parameters=[{"use_sim_time": True}],
+        condition=IfCondition(
+            PythonExpression(
+                ["'", headless, "' != 'true' and '", use_rviz, "' == 'true'"]
+            )
+        ),
     )
 
     return LaunchDescription(
         [
+            headless_arg,
+            use_rviz_arg,
             use_slam_arg,
             world_arg,
             enable_rosbridge_arg,

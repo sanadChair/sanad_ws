@@ -6,18 +6,46 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
+    OpaqueFunction,
     SetEnvironmentVariable,
 )
 from launch.substitutions import (
     Command,
     LaunchConfiguration,
-    PythonExpression,
-    PathJoinSubstitution,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
+
+
+def launch_gazebo(context, *args, **kwargs):
+    sanad_description = get_package_share_directory("sanad_description")
+    world_name = LaunchConfiguration("world").perform(context)
+    use_gz_gui = LaunchConfiguration("use_gz_gui").perform(context).lower() == "true"
+    gz_headless_rendering = (
+        LaunchConfiguration("gz_headless_rendering").perform(context).lower() == "true"
+    )
+
+    world_path = os.path.join(sanad_description, "worlds", f"{world_name}.world")
+    gz_args = [world_path, "-r", "-v", "4"]
+
+    if not use_gz_gui:
+        gz_args.append("-s")
+    if gz_headless_rendering:
+        gz_args.append("--headless-rendering")
+
+    return [
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                [
+                    os.path.join(get_package_share_directory("ros_gz_sim"), "launch"),
+                    "/gz_sim.launch.py",
+                ]
+            ),
+            launch_arguments={"gz_args": " ".join(gz_args)}.items(),
+        )
+    ]
 
 
 def generate_launch_description():
@@ -29,13 +57,15 @@ def generate_launch_description():
         default_value="small_house",
         description="Name of world to load (without .world extension)",
     )
-    world_name = LaunchConfiguration("world")
-    world_path = PathJoinSubstitution(
-        [
-            sanad_description,
-            "worlds",
-            PythonExpression(expression=["'", world_name, "'", " + '.world'"]),
-        ]
+    use_gz_gui_arg = DeclareLaunchArgument(
+        name="use_gz_gui",
+        default_value="true",
+        description="Start Gazebo with its GUI client enabled.",
+    )
+    gz_headless_rendering_arg = DeclareLaunchArgument(
+        name="gz_headless_rendering",
+        default_value="false",
+        description="Enable Gazebo headless rendering for rendering sensors.",
     )
 
     model_arg = DeclareLaunchArgument(
@@ -60,16 +90,6 @@ def generate_launch_description():
         package="robot_state_publisher",
         executable="robot_state_publisher",
         parameters=[{"robot_description": robot_description, "use_sim_time": True}],
-    )
-
-    gazebo = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            [
-                os.path.join(get_package_share_directory("ros_gz_sim"), "launch"),
-                "/gz_sim.launch.py",
-            ]
-        ),
-        launch_arguments=[("gz_args", [world_path, " -r -v 4"])],
     )
 
     gz_spawn_entity = Node(
@@ -100,10 +120,12 @@ def generate_launch_description():
     return LaunchDescription(
         [
             world_arg,
+            use_gz_gui_arg,
+            gz_headless_rendering_arg,
             model_arg,
             gazebo_resource_path,
             robot_state_publisher_node,
-            gazebo,
+            OpaqueFunction(function=launch_gazebo),
             gz_spawn_entity,
             gz_ros2_bridge,
         ]
