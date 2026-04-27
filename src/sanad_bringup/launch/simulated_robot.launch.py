@@ -1,10 +1,12 @@
 import os
+
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition, UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
@@ -39,19 +41,23 @@ def generate_launch_description():
     )
 
     gazebo = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("sanad_description"),
-            "launch",
-            "gazebo.launch.py",
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("sanad_description"),
+                "launch",
+                "gazebo.launch.py",
+            )
         ),
         launch_arguments={"world": LaunchConfiguration("world")}.items(),
     )
 
     controller = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("sanad_controller"),
-            "launch",
-            "controller.launch.py",
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("sanad_controller"),
+                "launch",
+                "controller.launch.py",
+            )
         )
     )
     # safety_stop = Node(
@@ -62,32 +68,55 @@ def generate_launch_description():
     # )
 
     localization = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("sanad_localization"),
-            "launch",
-            "global_localization.launch.py",
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("sanad_localization"),
+                "launch",
+                "global_localization.launch.py",
+            )
         ),
         condition=UnlessCondition(use_slam),
     )
 
     slam = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("sanad_mapping"), "launch", "slam.launch.py"
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("sanad_mapping"),
+                "launch",
+                "slam.launch.py",
+            )
         ),
         condition=IfCondition(use_slam),
     )
+
     navigation = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("sanad_navigation"),
-            "launch",
-            "navigation.launch.py",
-        ),
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("sanad_navigation"),
+                "launch",
+                "navigation.launch.py",
+            )
+        )
     )
+
+    room_manager = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("sanad_room_manager"),
+                "launch",
+                "room_manager.launch.py",
+            )
+        ),
+        launch_arguments={"use_sim_time": "true"}.items(),
+    )
+
     rosbridge = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("sanad_bringup"),
-            "launch",
-            "rosbridge.launch.py",
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("sanad_bringup"),
+                "launch",
+                "rosbridge.launch.py",
+            )
         ),
         launch_arguments={
             "rosbridge_host": LaunchConfiguration("rosbridge_host"),
@@ -126,6 +155,7 @@ def generate_launch_description():
             localization,
             slam,
             navigation,
+            room_manager,
             rosbridge,
             rviz,
         ]

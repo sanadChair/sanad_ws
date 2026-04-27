@@ -1,0 +1,3 @@
+# Empty request: returns all rooms in the map
+---
+sanad_interfaces/Room[] rooms
