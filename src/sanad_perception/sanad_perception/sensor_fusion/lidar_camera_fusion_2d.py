@@ -5,6 +5,7 @@ from message_filters import ApproximateTimeSynchronizer, Subscriber
 import numpy as np
 from tf2_ros import Buffer, TransformListener
 from sensor_msgs_py import point_cloud2
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 
 
 class DepthFusionNode2D(Node):
@@ -35,14 +36,35 @@ class DepthFusionNode2D(Node):
             (self.angle_max - self.angle_min) / self.angle_increment
         )
 
+        lidar_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+
+        camera_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,   
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+
         # Subscribers
-        self.rgbd_sub  = Subscriber(self, PointCloud2, '/realsense/points')
-        self.lidar_sub = Subscriber(self, LaserScan,   '/scan')
+        self.rgbd_sub  = Subscriber(self, PointCloud2, '/realsense/points',  qos_profile=camera_qos)
+        self.lidar_sub = Subscriber(self, LaserScan,   '/scan', qos_profile=lidar_qos)
+
+        # self.rgbd_sub.registerCallback(
+        #     lambda msg: self.get_logger().info('mf got rgbd')
+        # )
+        # self.lidar_sub.registerCallback(
+        #     lambda msg: self.get_logger().info('mf got lidar')
+        # )
 
         self.sync = ApproximateTimeSynchronizer(
             [self.rgbd_sub, self.lidar_sub],
-            queue_size=10,
-            slop=0.05
+            queue_size=30,
+            slop=1.0
         )
         self.sync.registerCallback(self.fusion_callback)
 
@@ -53,6 +75,15 @@ class DepthFusionNode2D(Node):
         self.target_frame = 'base_footprint'
 
         self.get_logger().info('DepthFusionNode2D started')
+
+    def _rgbd_cb(self, msg):
+        self.latest_rgbd = msg
+        # self.get_logger().info('got rgbd')   # remove after confirmed
+
+
+    def _lidar_cb(self, msg):
+        self.latest_lidar = msg
+        # self.get_logger().info('got lidar')
 
     # ── project RGB-D cloud → per-bin range array ────────────────────────────
 
@@ -144,8 +175,8 @@ class DepthFusionNode2D(Node):
         raw = np.array(scan_msg.ranges, dtype=np.float32)
 
         # Angles for each raw beam
-        # raw_angles = (scan_msg.angle_min +
-        #               np.arange(len(raw)) * scan_msg.angle_increment)
+        raw_angles = (scan_msg.angle_min +
+                      np.arange(len(raw)) * scan_msg.angle_increment)
         raw_angles = np.where(raw_angles > np.pi,
                           raw_angles - 2 * np.pi,
                           raw_angles)
@@ -171,6 +202,7 @@ class DepthFusionNode2D(Node):
     # ── fusion callback ──────────────────────────────────────────────────────
 
     def fusion_callback(self, rgbd_msg, lidar_msg):
+        self.get_logger().info('fusion_callback fired!')
 
         rgbd_bins  = self.rgbd_to_range_bins(rgbd_msg)
         lidar_bins = self.lidar_to_range_bins(lidar_msg)
