@@ -1,0 +1,54 @@
+# config/detection_debug.rviz
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Selection
+    Name: Selection
+  - Class: rviz_common/Tool Properties
+    Name: Tool Properties
+Visualization Manager:
+  Displays:
+    - Class: rviz_common/Group
+      Name: Detection Debug
+      Children:
+        - Class: rviz_default_plugins/Image
+          Name: RGB with Detections
+          Topic:
+            Value: /detections/image
+          Enabled: true
+          
+        - Class: rviz_default_plugins/Image
+          Name: Depth Overlay
+          Topic:
+            Value: /detections/depth_overlay
+          Enabled: false
+          
+        - Class: rviz_default_plugins/MarkerArray
+          Name: 3D Bounding Boxes
+          Topic:
+            Value: /detections/markers
+          Enabled: true
+          
+        - Class: rviz_default_plugins/Image
+          Name: Raw RGB
+          Topic:
+            Value: /realsense/image
+          Enabled: false
+          
+        - Class: rviz_default_plugins/Image
+          Name: Raw Depth
+          Topic:
+            Value: /realsense/depth_image
+          Enabled: false
+          
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      
+  Global Options:
+    Fixed Frame: camera_color_optical_frame
+    Frame Rate: 30

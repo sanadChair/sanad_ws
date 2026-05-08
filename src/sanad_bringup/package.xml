@@ -8,6 +8,7 @@
   <license>MIT AND Apache-2.0</license>
   
   <depend>sanad_description</depend>
+  <depend>sanad_room_manager</depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

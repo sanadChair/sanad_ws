@@ -1,0 +1,4 @@
+sanad_interfaces/Device device
+string room_name
+---
+bool success

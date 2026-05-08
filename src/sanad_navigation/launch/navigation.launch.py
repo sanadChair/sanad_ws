@@ -3,7 +3,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 
@@ -101,7 +101,7 @@ def generate_launch_description():
             {"autostart": True},
         ],
     )
-    front_filter = Node(
+    laser_left_filter = Node(
         package="laser_filters",
         executable="scan_to_scan_filter_chain",
         parameters=[
@@ -109,17 +109,17 @@ def generate_launch_description():
                 [
                     get_package_share_directory("sanad_navigation"),
                     "config",
-                    "laser_filter.yaml",
+                    "laser_left_filter.yaml",
                 ]
             )
         ],
         remappings=[
-            ("scan", "/scan"),
-            ("scan_filtered", "/scan_front_filtered"),
+            ("scan", "/scan_left"),
+            ("scan_filtered", "/scan_left_filtered"),
         ],
     )
 
-    rear_filter = Node(
+    laser_right_filter = Node(
         package="laser_filters",
         executable="scan_to_scan_filter_chain",
         parameters=[
@@ -127,16 +127,34 @@ def generate_launch_description():
                 [
                     get_package_share_directory("sanad_navigation"),
                     "config",
-                    "rear_laser_filter.yaml",
+                    "laser_right_filter.yaml",
                 ]
             )
         ],
         remappings=[
-            ("scan", "/scan_rear"),  # input
-            ("scan_filtered", "/scan_rear_filtered"),  # output
+            ("scan", "/scan_right"),  # input
+            ("scan_filtered", "/scan_right_filtered"),  # output
         ],
     )
 
+    slam_mapping = IncludeLaunchDescription(
+        os.path.join(
+            get_package_share_directory("sanad_mapping"),
+            "launch",
+            "slam.launch.py",
+        ),
+    )
+
+    dual_laser_merger_node = Node(
+        package="dual_laser_merger",
+        executable="dual_laser_merger_node",  # may be "merger_node" depending on build
+        name="dual_laser_merger",
+        output="screen",
+        parameters=[
+            os.path.join(sanad_navigation_pkg, "config", "dual_laser_merger.yaml"),
+            {"use_sim_time": use_sim_time},
+        ],
+    )
     return LaunchDescription(
         [
             use_sim_time_arg,
@@ -146,7 +164,9 @@ def generate_launch_description():
             nav2_bt_navigator,
             nav2_behavior,
             nav2_lifecycle_manager,
-            front_filter,
-            rear_filter,
+            # slam_mapping,
+            laser_left_filter,
+            laser_right_filter,
+            dual_laser_merger_node,
         ]
     )

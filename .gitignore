@@ -33,3 +33,5 @@ venv/
 Thumbs.db
 
 ROS.code-workspace
+
+dual_laser_merger
