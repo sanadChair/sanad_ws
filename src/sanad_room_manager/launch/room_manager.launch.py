@@ -24,17 +24,10 @@ def generate_launch_description():
         output="screen",
     )
 
-    room_location_tracker_node = Node(
-        package="sanad_room_manager",
-        executable="room_location_tracker_node",
-        output="screen",
-    )
-
     return LaunchDescription(
         [
             room_manager_node,
             room_nav_node,
             smart_home_device_node,
-            room_location_tracker_node,
         ]
     )
