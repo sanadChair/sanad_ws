@@ -29,6 +29,7 @@ setup(
             "keyboard_twist = sanad_interface_pkg.keyboard_twist:main",
             "ps3_twist = sanad_interface_pkg.ps3_twist:main",
             "human_follower= sanad_interface_pkg.human_follower:main",
+            "imu_to_cmdvel = sanad_interface_pkg.imu_twist:main",
         ],
     },
 )
