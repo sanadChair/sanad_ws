@@ -50,6 +50,15 @@ def generate_launch_description():
         condition=UnlessCondition(use_slam),
     )
 
+    joystick = IncludeLaunchDescription(
+        os.path.join(
+            get_package_share_directory("sanad_controller"),
+            "launch",
+            "joystick_teleop.launch.py",
+        ),
+        launch_arguments={"use_sim_time": "True"}.items(),
+    )
+
     slam = IncludeLaunchDescription(
         os.path.join(
             get_package_share_directory("sanad_mapping"), "launch", "slam.launch.py"
@@ -101,6 +110,7 @@ def generate_launch_description():
             world_arg,
             gazebo,
             controller,
+            joystick,
             # safety_stop,
             localization,
             slam,
