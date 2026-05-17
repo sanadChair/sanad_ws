@@ -164,7 +164,7 @@ class DetectorTrackerNode(Node):
     def _process(self, rgb_msg: Image, depth_msg: Image):
         try:
             bgr     = self._bridge.imgmsg_to_cv2(rgb_msg,   'bgr8')
-            depth_m = self._bridge.imgmsg_to_cv2(depth_msg, 'passthrough').astype(np.float32) * 1e-3
+            depth_m = self._bridge.imgmsg_to_cv2(depth_msg, 'passthrough').astype(np.float32) 
         except Exception as e:
             self.get_logger().error(f'Decode error: {e}')
             return
@@ -197,6 +197,7 @@ class DetectorTrackerNode(Node):
             ]
 
         self._tracks_pub.publish(out)
+        self.get_logger().info(f"Published {out.tracks}")
 
         if self._debug_pub and (self._sync_count % 3 == 0): # publish every 3rd frame
             viz = draw_tracks(bgr, out.tracks)
