@@ -23,10 +23,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            # "lidar_merger    = sanad_perception.lidar_merger:main",
-            'lidar_detector  = sanad_perception.human_follower.lidar_cluster_detector:main',
-            'yolo_detector   = sanad_perception.human_follower.yolo_depth_detector:main',
-            'tracker         = sanad_perception.human_follower.tracker_node:main',
+            'detector_tracker_node   = sanad_perception.human_follower.detector_tracker_node:main',
             'lidar_camera_fusion_3d    = sanad_perception.sensor_fusion.lidar_camera_fusion_3d:main',
             'lidar_camera_fusion_2d    = sanad_perception.sensor_fusion.lidar_camera_fusion_2d:main',
         ],
