@@ -5,15 +5,16 @@ eye_tracker_node.py – Real-time eye / gaze tracker using MediaPipe FaceLandmar
 
 Published topics
 ----------------
-/eye_tracking/gaze_direction  (std_msgs/String)
-    One of: "north", "south", "east", "west", "center"
+/eye_tracking/gaze_position  (std_msgs/String)
+    Format: "x,y" where x and y are floats between 0.0 and 1.0
+    0.0 = left/top, 1.0 = right/bottom
 
 /eye_tracking/eye_state  (std_msgs/String)
     One of: "open", "blink", "closed"
 
 The node grabs frames from a webcam, runs the MediaPipe FaceLandmarker to
 extract 478 facial landmarks (including iris 468-477), and derives:
-  • Horizontal / vertical gaze direction  (iris centre relative to eye corners)
+  • Continuous gaze position (x,y)
   • Eye Aspect Ratio (EAR) to detect blinks / prolonged closure
 """
 
@@ -93,7 +94,7 @@ def _eye_aspect_ratio(landmarks, top_idx, bottom_idx, left_idx, right_idx,
 
 
 class EyeTrackerNode(Node):
-    """Publishes gaze direction and eye state at a configurable rate."""
+    """Publishes continuous gaze position and eye state at a configurable rate."""
 
     def __init__(self):
         super().__init__("eye_tracker")
@@ -101,16 +102,22 @@ class EyeTrackerNode(Node):
         # ── Parameters ──────────────────────────────────────────────
         self.declare_parameter("camera_index", 0)
         self.declare_parameter("publish_rate", 30.0)
-        self.declare_parameter("gaze_horizontal_threshold", 0.035)
-        self.declare_parameter("gaze_vertical_threshold", 0.030)
+        self.declare_parameter("gaze_range_horizontal", 0.040)
+        self.declare_parameter("gaze_range_vertical", 0.020)
+        self.declare_parameter("gaze_offset_horizontal", 0.000)
+        self.declare_parameter("gaze_offset_vertical", -0.015)
+        self.declare_parameter("gaze_smoothing", 0.3)
         self.declare_parameter("ear_threshold", 0.20)
         self.declare_parameter("show_debug_window", True)
         self.declare_parameter("model_path", "")
 
         self.cam_idx    = self.get_parameter("camera_index").value
         self.rate_hz    = self.get_parameter("publish_rate").value
-        self.h_thresh   = self.get_parameter("gaze_horizontal_threshold").value
-        self.v_thresh   = self.get_parameter("gaze_vertical_threshold").value
+        self.h_range    = self.get_parameter("gaze_range_horizontal").value
+        self.v_range    = self.get_parameter("gaze_range_vertical").value
+        self.h_offset   = self.get_parameter("gaze_offset_horizontal").value
+        self.v_offset   = self.get_parameter("gaze_offset_vertical").value
+        self.smoothing  = self.get_parameter("gaze_smoothing").value
         self.ear_thresh = self.get_parameter("ear_threshold").value
         self.show_debug = self.get_parameter("show_debug_window").value
         model_path_param = self.get_parameter("model_path").value
@@ -141,9 +148,10 @@ class EyeTrackerNode(Node):
 
         self.get_logger().info(f"Loading FaceLandmarker model from: {model_path}")
 
-        # ── Publishers ──────────────────────────────────────────────
-        self.gaze_pub = self.create_publisher(String, "/eye_tracking/gaze_direction", 10)
+        # ── Publishers & Subscribers ────────────────────────────────
+        self.gaze_pub = self.create_publisher(String, "/eye_tracking/gaze_position", 10)
         self.eye_pub  = self.create_publisher(String, "/eye_tracking/eye_state", 10)
+        self.cmd_sub  = self.create_subscription(String, "/eye_tracking/command", self._cmd_cb, 10)
 
         # ── Camera ──────────────────────────────────────────────────
         self.cap = cv2.VideoCapture(self.cam_idx)
@@ -167,6 +175,20 @@ class EyeTrackerNode(Node):
         # ── State ───────────────────────────────────────────────────
         self._prev_eye_state = "open"
         self._frame_ts = 0  # monotonic frame timestamp in ms for VIDEO mode
+        self._smoothed_x = 0.5
+        self._smoothed_y = 0.5
+        self._last_click_pos = None
+        
+        # History buffer to rewind cursor before a blink (prevents downward jump)
+        from collections import deque
+        self._gaze_history = deque(maxlen=7)  # ~230ms of history
+
+        # ── Debug Window Setup ──────────────────────────────────────
+        if self.show_debug:
+            # WINDOW_FREERATIO allows the image to stretch and fill the screen, ignoring the camera's aspect ratio
+            cv2.namedWindow("SANAD Eye Tracker", cv2.WINDOW_NORMAL | cv2.WINDOW_FREERATIO)
+            # Make it large by default
+            cv2.resizeWindow("SANAD Eye Tracker", 1280, 720)
 
         # ── Timer ───────────────────────────────────────────────────
         period = 1.0 / self.rate_hz
@@ -174,6 +196,11 @@ class EyeTrackerNode(Node):
         self.get_logger().info("EyeTrackerNode started  ✓")
 
     # ────────────────────────────────────────────────────────────────
+    def _cmd_cb(self, msg: String):
+        """Listen for click commands to mark the last click position."""
+        if msg.data == "click":
+            self._last_click_pos = (self._smoothed_x, self._smoothed_y)
+
     def _timer_callback(self):
         ret, frame = self.cap.read()
         if not ret:
@@ -191,7 +218,8 @@ class EyeTrackerNode(Node):
         # Detect landmarks
         result = self.landmarker.detect_for_video(mp_image, self._frame_ts)
 
-        gaze_dir = "center"
+        gaze_x = self._smoothed_x
+        gaze_y = self._smoothed_y
         eye_state = "open"
 
         if result.face_landmarks and len(result.face_landmarks) > 0:
@@ -228,17 +256,22 @@ class EyeTrackerNode(Node):
             v_ratio = (_vert_ratio(l_iris, l_left, l_right) +
                        _vert_ratio(r_iris, r_left, r_right)) / 2.0
 
-            # Determine dominant direction
-            if abs(v_ratio) > abs(h_ratio):
-                if v_ratio < -self.v_thresh:
-                    gaze_dir = "north"
-                elif v_ratio > self.v_thresh:
-                    gaze_dir = "south"
-            else:
-                if h_ratio < -self.h_thresh:
-                    gaze_dir = "west"
-                elif h_ratio > self.h_thresh:
-                    gaze_dir = "east"
+            # Map from [-range, +range] to [-1.0, 1.0] using offsets
+            # Horizontal: positive h_ratio means looking right (since frame is mirrored)
+            norm_h = (h_ratio - self.h_offset) / self.h_range
+            norm_v = (v_ratio - self.v_offset) / self.v_range
+            
+            # Apply a slight non-linear curve to make small movements smoother and edges easier to reach
+            norm_h = np.sign(norm_h) * (abs(norm_h) ** 1.2)
+            norm_v = np.sign(norm_v) * (abs(norm_v) ** 1.2)
+
+            # Clamp to [-1.0, 1.0]
+            norm_h = max(-1.0, min(1.0, norm_h))
+            norm_v = max(-1.0, min(1.0, norm_v))
+
+            # Map to [0.0, 1.0]
+            raw_x = (norm_h + 1.0) / 2.0
+            raw_y = (norm_v + 1.0) / 2.0
 
             # ── Eye Aspect Ratio (blink / closed detection) ─────────
             l_ear = _eye_aspect_ratio(
@@ -257,8 +290,20 @@ class EyeTrackerNode(Node):
                     eye_state = "blink"   # transition: open → closed
                 else:
                     eye_state = "closed"  # still closed
+                
+                # REWIND cursor to before the blink to avoid the "south jump"
+                if len(self._gaze_history) > 0:
+                    self._smoothed_x, self._smoothed_y = self._gaze_history[0]
             else:
                 eye_state = "open"
+                # Update smoothing only when eyes are open
+                self._smoothed_x = (self.smoothing * raw_x) + ((1.0 - self.smoothing) * self._smoothed_x)
+                self._smoothed_y = (self.smoothing * raw_y) + ((1.0 - self.smoothing) * self._smoothed_y)
+                # Save safe position
+                self._gaze_history.append((self._smoothed_x, self._smoothed_y))
+            
+            gaze_x = self._smoothed_x
+            gaze_y = self._smoothed_y
 
             self._prev_eye_state = eye_state
 
@@ -267,8 +312,25 @@ class EyeTrackerNode(Node):
                 # Draw iris circles
                 for ix, iy in [l_iris, r_iris]:
                     cv2.circle(frame, (int(ix), int(iy)), 3, (0, 255, 0), -1)
+                
+                # Draw crosshair cursor mapped to the window size
+                cursor_px_x = int(gaze_x * w)
+                cursor_px_y = int(gaze_y * h)
+                cv2.drawMarker(frame, (cursor_px_x, cursor_px_y), (0, 0, 255), 
+                               cv2.MARKER_CROSS, 20, 2)
+
+                # Draw last click position as a yellow circle
+                if self._last_click_pos is not None:
+                    click_x, click_y = self._last_click_pos
+                    c_px_x = int(click_x * w)
+                    c_px_y = int(click_y * h)
+                    cv2.circle(frame, (c_px_x, c_px_y), 15, (0, 255, 255), -1)  # Yellow fill
+                    cv2.circle(frame, (c_px_x, c_px_y), 15, (0, 0, 0), 2)       # Black border
+                    cv2.putText(frame, "Last Click", (c_px_x + 20, c_px_y), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+
                 # Draw info text
-                cv2.putText(frame, f"Gaze: {gaze_dir}",
+                cv2.putText(frame, f"Gaze X,Y: {gaze_x:.2f}, {gaze_y:.2f}",
                             (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
                             (0, 255, 255), 2)
                 cv2.putText(frame, f"EAR: {avg_ear:.3f}  State: {eye_state}",
@@ -280,7 +342,7 @@ class EyeTrackerNode(Node):
 
         # ── Publish ─────────────────────────────────────────────────
         gaze_msg = String()
-        gaze_msg.data = gaze_dir
+        gaze_msg.data = f"{gaze_x:.4f},{gaze_y:.4f}"
         self.gaze_pub.publish(gaze_msg)
 
         eye_msg = String()

@@ -10,14 +10,18 @@ sanad_eye_tracking:
       # How often the tracker publishes (Hz)
       publish_rate: 30.0
 
-      # --- Gaze thresholds (normalised iris offset) ---
-      # These define the size of the "center" dead zone.
-      # Values are ~doubled from defaults to give a comfortable center
-      # area for the "click" action without accidentally triggering moves.
-      # Horizontal: negative = left / positive = right
-      gaze_horizontal_threshold: 0.035
-      # Vertical:   negative = up   / positive = down
-      gaze_vertical_threshold: 0.030
+      # --- Gaze Mapping ---
+      # Max absolute ratio for normalization to [0.0, 1.0]
+      gaze_range_horizontal: 0.040
+      gaze_range_vertical: 0.020
+      
+      # Offsets to center the cursor (adjust if cursor is stuck at top/bottom/left/right)
+      gaze_offset_horizontal: 0.000
+      gaze_offset_vertical: -0.015
+
+      # Exponential Moving Average (EMA) smoothing factor (0.0 to 1.0)
+      # Lower is smoother but laggier
+      gaze_smoothing: 0.3
 
       # --- Blink / eye-closed detection ---
       # Eye-aspect-ratio below this value counts as "closed"
@@ -28,18 +32,8 @@ sanad_eye_tracking:
 
   gaze_controller:
     ros__parameters:
-      # Seconds the gaze must stay in one cardinal direction to trigger a move
-      direction_hold_time: 3.0
-
-      # Seconds the gaze must stay at center to trigger a "click"
-      center_hold_time: 3.0
-
-      # Seconds both eyes must stay closed to trigger "go back"
-      close_hold_time: 3.0
+      # Seconds both eyes must stay closed to trigger a "click"
+      click_hold_time: 2.0
 
       # Cooldown (s) between any two commands to prevent spam
       command_cooldown: 1.0
-
-      # Grid size (rows x cols) for the on-screen window layout
-      grid_rows: 3
-      grid_cols: 3
