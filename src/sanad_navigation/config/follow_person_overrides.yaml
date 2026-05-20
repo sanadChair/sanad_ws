@@ -1,0 +1,45 @@
+# follow_person_overrides.yaml
+#
+# Loaded AFTER the original config YAMLs in navigation_follow_person.launch.py.
+# Only contains the parameters that differ from the standard navigation config.
+# Everything not listed here keeps its original value.
+#
+# To go back to normal navigation, simply use navigation.launch.py — this file
+# is never touched by the original launch.
+
+controller_server:
+  ros__parameters:
+    # stateful=True latches "goal reached" so the robot stops responding to new
+    # goals after the first arrival. Must be false for continuous following.
+    general_goal_checker:
+      stateful: false
+
+    # 10s caused false progress failures when person stands still.
+    progress_checker:
+      movement_time_allowance: 30.0
+
+    FollowPath:
+      # 0.3 m/s cannot keep pace with a walking person.
+      desired_linear_vel: 0.5
+      min_approach_linear_velocity: 0.1
+
+      # 0.785 rad (45°) caused stop-rotate oscillation at 2Hz goal updates.
+      # Only rotate in place for sharp turns.
+      rotate_to_heading_min_angle: 1.2
+
+planner_server:
+  ros__parameters:
+    GridBased:
+      # Person's feet are often in or adjacent to an occupied cell.
+      # 0.125m caused frequent planning failures.
+      tolerance: 0.5
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      # At 0.5 m/s, 5Hz = 10cm blind per cycle. 10Hz halves that.
+      update_frequency: 10.0
+      publish_frequency: 5.0
+
+      # Must match global_costmap to avoid replanning thrash.
+      robot_radius: 0.2

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4">
+  <!--
+    follow_person_bt.xml
+    ────────────────────
+    Minimal BT for person following. Recovery behaviors (Spin, Wait, BackUp)
+    are intentionally removed.
+
+    Rationale
+    ─────────
+    The original BT had a RecoveryNode wrapping the pipeline. When
+    ComputePathToPose failed (person near a wall, brief occlusion), the
+    recovery sequence fired: Spin 90° → Wait 5s → BackUp 0.3m.
+    During those 5+ seconds Nav2 was locked in recovery and ignored all
+    incoming NavigateToPose goals. By the time recovery finished the person
+    had moved and the robot was disoriented.
+
+    With this BT, a planning failure simply returns FAILURE on that tick.
+    The BT ticks again immediately (bt_loop_duration: 10ms) with whatever
+    the latest goal is — which is almost always in free space by then.
+
+    PipelineSequence behaviour
+    ──────────────────────────
+    • ComputePathToPose runs at 1 Hz via RateController. It re-plans the
+      global path once per second regardless of goal updates.
+    • FollowPath runs every tick (10ms). It tracks the current path and
+      smoothly handles the frequent goal changes at 2Hz from the follow node.
+    • If either child returns FAILURE the whole sequence fails silently
+      and the next tick starts fresh. No state is latched.
+  -->
+  <BehaviorTree ID="FollowPerson">
+    <PipelineSequence>
+      <RateController hz="1.0">
+        <ComputePathToPose goal="{goal}" planner_id="GridBased" path="{path}"/>
+      </RateController>
+      <FollowPath controller_id="FollowPath" path="{path}"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>
