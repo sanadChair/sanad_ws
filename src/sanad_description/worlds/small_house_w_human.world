@@ -846,7 +846,7 @@
 
           <waypoint>
             <time>2.4</time>
-            <pose>3.0 0.0 1.0519 0 0 0.0</pose>
+            <pose>5.0 0.0 1.0519 0 0 0.0</pose>
           </waypoint>
 
           <!-- <waypoint>
