@@ -12,7 +12,7 @@
 
 ---
 
-## Part 1 — OpenNI SDK Setup
+## Part 1 — OpenNI SDK Setup 
 
 ### 1.1 Download the SDK
 
