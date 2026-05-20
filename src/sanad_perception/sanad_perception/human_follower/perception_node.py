@@ -1,4 +1,4 @@
-"""RealSense RGB+Depth → YOLO26 + ByteTrack → TrackedPersonArray."""
+"""RealSense RGB+Depth → YOLO + ByteTrack → single TrackedPerson (selected target)."""
 
 import numpy as np
 import rclpy
@@ -41,10 +41,11 @@ _DEFAULTS = {
     'rgb_topic':            "/realsense/image",
     'depth_topic':          "/realsense/depth_image",
     'device': 'cuda:0',
+    'lost_timeout':           2.0, # seconds before releasing a latched target
 }
 
 
-class DetectorTrackerNode(Node):
+class PerceptionNode(Node):
 
     def __init__(self):
         super().__init__('detector_tracker_node')
@@ -60,6 +61,7 @@ class DetectorTrackerNode(Node):
         self._shrink = p('depth_bbox_shrink')
         self._kernel = p('depth_kernel_size')
         self._debug  = p('debug_viz')
+        self._lost_timeout = p('lost_timeout')
 
         self.device  = p("device")
         if 'cuda' in self.device and not torch.cuda.is_available():
@@ -72,6 +74,11 @@ class DetectorTrackerNode(Node):
 
         self._model  = self._load_model(p('model_path'))
 
+        # ── target selection state ──────────────────────────────────────────
+        self._target_id:       int   = -1
+        self._last_seen_time:  float = 0.0   # seconds
+
+        # ── inference thread ────────────────────────────────────────────────
         self._frame_lock  = threading.Condition()
         self._frame_queue: deque = deque(maxlen=1)
         self._infer_thread = threading.Thread(target=self._infer_loop, daemon=True)
@@ -92,9 +99,11 @@ class DetectorTrackerNode(Node):
         )
         self._sync.registerCallback(self._on_images)
 
-        self._tracks_pub = self.create_publisher(TrackedPersonArray, '/person/tracks', 10)
+        # Single selected target — downstream nodes need only this
+        self._target_pub = self.create_publisher(TrackedPerson, '/person/target', 10)
         self._debug_pub  = (
-            self.create_publisher(Image, '/person/debug_image', _DEBUG_QOS) if self._debug else None
+            self.create_publisher(Image, '/person/debug_image', _DEBUG_QOS)
+            if self._debug else None
         )
 
         self._sync_count = 0
@@ -118,6 +127,8 @@ class DetectorTrackerNode(Node):
         self.get_logger().info('Model ready')
         return model
     
+    # ── diagnostics ──────────────────────────────────────────────────────────
+    
     def _log_sync_rate(self):
         self.get_logger().info(f'Sync callbacks in last 10s: {self._sync_count}')
         self._sync_count = 0
@@ -129,6 +140,17 @@ class DetectorTrackerNode(Node):
                 f'No sync callback for {elapsed:.1f}s — '
                 'check camera topics or increase sync_slop'
             )
+
+    # ── sync callback (enqueue only) ─────────────────────────────────────────
+
+    def _on_images(self, rgb_msg: Image, depth_msg: Image):
+        self._last_cb_stamp = self.get_clock().now()
+        self._sync_count += 1
+        with self._frame_lock:
+            self._frame_queue.append((rgb_msg, depth_msg))
+            self._frame_lock.notify()
+
+    # ── inference thread ─────────────────────────────────────────────────────
 
     def _infer_loop(self):
         """Dedicated inference thread — drains the queue and runs YOLO.
@@ -151,15 +173,7 @@ class DetectorTrackerNode(Node):
                     throttle_duration_sec=2.0,
                 )
 
-    # ------------------------------------------------------------------ #
-    # Sync callback — ENQUEUE ONLY, never call _process() here            #
-    # ------------------------------------------------------------------ #
-    def _on_images(self, rgb_msg: Image, depth_msg: Image):
-        self._last_cb_stamp = self.get_clock().now()
-        self._sync_count += 1
-        with self._frame_lock:
-            self._frame_queue.append((rgb_msg, depth_msg))
-            self._frame_lock.notify()          # wake inference thread immediately
+    # ── main processing ───────────────────────────────────────────────────────
 
     def _process(self, rgb_msg: Image, depth_msg: Image):
         try:
@@ -187,27 +201,64 @@ class DetectorTrackerNode(Node):
         self.get_logger().info(f'Inference: {dt:.1f} ms', throttle_duration_sec=2.0)
 
 
-        out = TrackedPersonArray(header=rgb_msg.header, target_id=-1)
         r = results[0] if results else None
+        tracks = []
 
         if r is not None and r.boxes is not None and r.boxes.id is not None:
-            out.tracks = [
+            tracks = [
                 self._make_track(rgb_msg.header, r.boxes, i, depth_m)
                 for i in range(len(r.boxes))
             ]
 
-        self._tracks_pub.publish(out)
-        self.get_logger().info(f"Published {out.tracks}")
+        target = self._select_target(tracks)
+        if target is not None:
+            self._target_pub.publish(target)
+            self.get_logger().info(
+                f'Target track_id={target.track_id} depth={target.depth_m:.2f}m',
+                throttle_duration_sec=2.0,
+            )
 
         if self._debug_pub and (self._sync_count % 3 == 0): # publish every 3rd frame
-            viz = draw_tracks(bgr, out.tracks)
+            # Highlight only the selected target in the visualisation
+            viz = draw_tracks(bgr, [target] if target else [])
             msg = self._bridge.cv2_to_imgmsg(viz, 'bgr8')
             msg.header = rgb_msg.header
             self._debug_pub.publish(msg)
+
+    # ── target selection ──────────────────────────────────────────────────────
+
+    def _select_target(self, tracks: list) -> TrackedPerson | None:
+        """
+        Latch onto the closest valid person; hold the latch for lost_timeout
+        seconds after they disappear before resetting.
+        """
+        now = self.get_clock().now().nanoseconds * 1e-9
+
+        if self._target_id >= 0:
+            match = next((t for t in tracks if t.track_id == self._target_id), None)
+            if match is not None:
+                self._last_seen_time = now
+                return match
+            # Target missing — wait out the timeout before resetting
+            if (now - self._last_seen_time) < self._lost_timeout:
+                return None
             self.get_logger().info(
-                f'Tracks: {len(out.tracks)}',
-                throttle_duration_sec=2.0,
+                f'Target track_id={self._target_id} lost — resetting'
             )
+            self._target_id = -1
+
+        # No target yet — pick the closest person with a valid depth reading
+        valid = [t for t in tracks if t.depth_valid]
+        if not valid:
+            return None
+
+        target = min(valid, key=lambda t: t.depth_m)
+        self._target_id      = target.track_id
+        self._last_seen_time = now
+        self.get_logger().info(f'Acquired target track_id={self._target_id}')
+        return target
+
+    # ── track builder ─────────────────────────────────────────────────────────
 
     def _make_track(self, header, boxes, i: int, depth_m: np.ndarray) -> TrackedPerson:
         x1, y1, x2, y2 = boxes.xyxy[i].cpu().numpy().tolist()
@@ -228,7 +279,7 @@ class DetectorTrackerNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = DetectorTrackerNode()
+    node = PerceptionNode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

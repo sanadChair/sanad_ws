@@ -25,8 +25,8 @@ setup(
         "console_scripts": [
             'lidar_camera_fusion_3d    = sanad_perception.sensor_fusion.lidar_camera_fusion_3d:main',
             'lidar_camera_fusion_2d    = sanad_perception.sensor_fusion.lidar_camera_fusion_2d:main',
-            'detector_tracker_node   = sanad_perception.human_follower.detector_tracker_node:main',
-            'pose_estimator_node   = sanad_perception.human_follower.pose_estimator_node:main',
+            'perception_node   = sanad_perception.human_follower.perception_node:main',
+            'follow_node   = sanad_perception.human_follower.follow_node:main',
         ],
     },
 )
