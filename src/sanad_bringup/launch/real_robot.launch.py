@@ -138,6 +138,6 @@ def generate_launch_description():
             # slam,
             # navigation,
             # rviz_slam,
-            # rviz_nav,r
+            # rviz_nav,
         ]
     )

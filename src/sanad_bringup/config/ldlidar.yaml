@@ -4,7 +4,7 @@ ldlidar_node:
     topic_name: scan
     lidar_frame: laser_link
 
-    port_name: /dev/ttyUSB1
+    port_name: /dev/ttyUSB0
     port_baudrate: 230400
 
     laser_scan_dir: true
