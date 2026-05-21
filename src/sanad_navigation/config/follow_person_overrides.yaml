@@ -43,3 +43,9 @@ local_costmap:
 
       # Must match global_costmap to avoid replanning thrash.
       robot_radius: 0.2
+
+bt_navigator:
+  ros__parameters:
+    # 10ms (100Hz) is tighter than needed for following and spams tick warnings.
+    # 20ms (50Hz) gives the planner room to breathe without affecting responsiveness.
+    bt_loop_duration: 20

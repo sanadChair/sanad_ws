@@ -119,6 +119,7 @@ def generate_launch_description():
             {"default_nav_to_pose_bt_xml": bt("follow_person_bt.xml")},
             # nav_through_poses keeps the original BT (not used during following)
             {"default_nav_through_poses_bt_xml": bt("simple_navigation_w_replanning.xml")},
+            overrides,
         ],
     )
 

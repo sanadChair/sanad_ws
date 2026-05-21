@@ -96,7 +96,7 @@ class FollowNode(Node):
         self._map_frame    = p('map_frame')
         self._tf_timeout   = Duration(seconds=p('tf_timeout'))
 
-        self._tf_buffer   = tf2_ros.Buffer()
+        self._tf_buffer   = tf2_ros.Buffer(cache_time=Duration(seconds=30.0))
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
 
         self._fx = self._fy = self._cx = self._cy = None   # populated on first CameraInfo
@@ -131,6 +131,12 @@ class FollowNode(Node):
 
         # Watchdog: fires when person disappears
         self._watchdog = self.create_timer(self._lost_timeout, self._on_lost)
+
+        self._goal_handle        = None
+        self._goal_pending       = False   # True between send and accept
+        self._last_person_pos    = None
+        self._last_sent_goal_pos = None
+        self._last_goal_time     = 0.0
 
         self.get_logger().info('FollowNode ready — waiting for Nav2 action server…')
         self._action.wait_for_server()
@@ -170,9 +176,23 @@ class FollowNode(Node):
             point_map = self._tf_buffer.transform(
                 point_cam, self._map_frame, timeout=self._tf_timeout
             )
+        except tf2_ros.ExtrapolationException:
+            # Buffer doesn't reach back to the image stamp yet (happens at startup
+            # or after a sim reset). Fall back to latest available transform.
+            # This introduces a small lateral error during rotation, but is better
+            # than dropping the frame entirely.
+            try:
+                point_cam.header.stamp = Time().to_msg()
+                point_map = self._tf_buffer.transform(
+                    point_cam, self._map_frame, timeout=self._tf_timeout
+                )
+            except (tf2_ros.LookupException,
+                    tf2_ros.ConnectivityException,
+                    tf2_ros.ExtrapolationException) as e:
+                self.get_logger().warn(f'TF fallback also failed: {e}', throttle_duration_sec=2.0)
+                return None
         except (tf2_ros.LookupException,
-                tf2_ros.ConnectivityException,
-                tf2_ros.ExtrapolationException) as e:
+                tf2_ros.ConnectivityException) as e:
             self.get_logger().warn(f'TF error: {e}', throttle_duration_sec=2.0)
             return None
 
@@ -205,6 +225,7 @@ class FollowNode(Node):
 
         if self._pose_pub:
             self._pose_pub.publish(pose)
+            self.get_logger().info(f"Published : {pose}")
 
         person_pos = pose.pose.position
 
@@ -246,7 +267,10 @@ class FollowNode(Node):
             )
             return tf.transform.translation
         except tf2_ros.TransformException as e:
-            self.get_logger().warn(f'TF robot position: {e}', throttle_duration_sec=5.0)
+            self.get_logger().warn(
+                f'TF robot position (map→{self._base_frame}): {e}',
+                throttle_duration_sec=5.0,
+            )
             return None
 
     def _compute_goal(self, person_pos, robot_pos) -> PoseStamped | None:
@@ -269,6 +293,9 @@ class FollowNode(Node):
         return pose
 
     def _goal_active(self) -> bool:
+        """True when a goal is in-flight: either pending acceptance or executing."""
+        if self._goal_pending:
+            return True
         return (self._goal_handle is not None and
                 self._goal_handle.status not in _TERMINAL)
 
@@ -276,6 +303,7 @@ class FollowNode(Node):
         if self._goal_active():
             self._goal_handle.cancel_goal()
 
+        self._goal_pending = True   # guard against race until _on_goal_accepted fires
         future = self._action.send_goal_async(NavigateToPose.Goal(pose=pose))
         future.add_done_callback(self._on_goal_accepted)
 
@@ -284,7 +312,8 @@ class FollowNode(Node):
         self._last_goal_time     = self.get_clock().now().nanoseconds * 1e-9
 
     def _on_goal_accepted(self, future):
-        self._goal_handle = future.result()
+        self._goal_pending = False   # acceptance resolved either way
+        self._goal_handle  = future.result()
         if not self._goal_handle.accepted:
             self.get_logger().warn('Goal rejected by Nav2')
             return
@@ -292,8 +321,14 @@ class FollowNode(Node):
 
     def _on_goal_result(self, future):
         status = future.result().status
-        if status not in (GoalStatus.STATUS_SUCCEEDED, GoalStatus.STATUS_CANCELED):
-            self.get_logger().warn(f'Goal ended with status {status}')
+        labels = {
+            GoalStatus.STATUS_SUCCEEDED: 'SUCCEEDED',
+            GoalStatus.STATUS_CANCELED:  'CANCELED',
+            GoalStatus.STATUS_ABORTED:   'ABORTED',
+        }
+        self.get_logger().info(
+            f'Goal ended: {labels.get(status, f"UNKNOWN({status})")}'
+        )
 
     # ── watchdog ─────────────────────────────────────────────────────────────
 
