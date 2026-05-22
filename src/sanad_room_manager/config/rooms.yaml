@@ -1,9 +1,9 @@
 kitchen:
   coordinates:
-    min_x: 4,65
+    min_x: 4.65
     max_x: 8.7
     min_y: 3.1
-    max_y:-4.8
+    max_y: -4.8
     theta: 0.0
     pose:
       x: 6.558255195617676

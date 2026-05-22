@@ -15,7 +15,12 @@ class BulletproofWhisperNode(Node):
         self.publisher_ = self.create_publisher(String, '/robot/voice_command', 10)
         
         # Path to the shared state file
-        self.state_path = os.path.expanduser('~/robot_ws/src/llm_control/config/current_lang.yaml')
+        try:
+            from ament_index_python.packages import get_package_share_directory
+            share_dir = get_package_share_directory('sanad_voice_control')
+            self.state_path = os.path.join(share_dir, 'config', 'current_lang.yaml')
+        except Exception:
+            self.state_path = 'config/current_lang.yaml'
         
         self.wake_words = {
             "ar": ["سند", "سناد", "صند", "sanad"],
