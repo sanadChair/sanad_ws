@@ -29,6 +29,9 @@ Usage
 
 from __future__ import annotations
 
+from click import Parameter
+from pathlib import Path
+
 import numpy as np
 import rclpy
 import rclpy.duration
@@ -44,6 +47,9 @@ from sensor_msgs.msg import LaserScan, PointCloud2
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Float32
 from tf2_ros import Buffer, TransformListener
+import json
+from ament_index_python.packages import get_package_share_directory
+
 
 from .fusion_utils import (
     apply_depth_bias,
@@ -108,14 +114,34 @@ class FusionNode(Node):
             (self.angle_max - self.angle_min) / self.angle_increment
         )
 
+        self.calibration_file = Path(
+                    get_package_share_directory("sanad_perception")
+                ).parents[3] / "src" / "sanad_perception" / "sanad_perception" / "sensor_fusion" / "calibration.json"
+
         # ── Depth-bias state ──────────────────────────────────────────────────
+        # 1. Try manual override
         if not np.isnan(manual_delta_z):
             self.delta_z = float(manual_delta_z)
             self.get_logger().info(
                 f"Manual depth bias override: Δz = {self.delta_z:+.4f} m"
             )
+        # 2. Else try loading from calibration file as a cold-start fallback
         else:
-            self.delta_z = 0.0  # will be updated when /depth_bias arrives
+            loaded = self._load_bias_from_file()
+            if loaded is not None:
+                self.delta_z = loaded
+                self.get_logger().info(
+                    f"Loaded Δz={self.delta_z:+.4f} m from "
+                    f"{self.calibration_file}"
+                )
+            else:
+                self.delta_z = 0.0
+                self.get_logger().warn(
+                    f"No calibration file found at {self.calibration_file} — "
+                    "running with Δz = 0.0 until /depth_bias arrives."
+                )
+
+
 
         # ── TF2 ──────────────────────────────────────────────────────────────
         self.tf_buffer   = Buffer()
@@ -165,6 +191,27 @@ class FusionNode(Node):
             f"target_frame={self.target_frame} | "
             f"initial Δz={self.delta_z:+.4f} m"
         )
+
+    def _load_bias_from_file(self) -> float | None:
+        """Load Δz from disk if the calibration file exists."""
+        if not self.calibration_file.exists():
+            return None
+
+        try:
+            with self.calibration_file.open("r") as fh:
+                data = json.load(fh)
+
+            val = float(data["delta_z"])
+            if not np.isfinite(val):
+                raise ValueError("non-finite value")
+
+            return val
+
+        except Exception as exc:
+            self.get_logger().error(
+                f"Failed to load {self.calibration_file}: {exc}"
+            )
+            return None
 
     # ── Bias callback ─────────────────────────────────────────────────────────
 

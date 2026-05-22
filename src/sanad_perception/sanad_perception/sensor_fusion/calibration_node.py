@@ -46,8 +46,9 @@ from rclpy.qos import (
 from sensor_msgs.msg import LaserScan, PointCloud2
 from std_msgs.msg import Float32, String
 from tf2_ros import Buffer, TransformListener
+from ament_index_python.packages import get_package_share_directory
 
-import json
+import json, os
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -86,6 +87,18 @@ class CalibrationNode(Node):
         self.min_height     = self.get_parameter("min_height").value
         self.max_height     = self.get_parameter("max_height").value
 
+        # ── File persistence ─────────────────────────────────────────────────
+        self.declare_parameter("calibration_file",  "")
+        self.declare_parameter("force_recalibrate", False)
+
+        cal_file_param = self.get_parameter("calibration_file").value
+        self.calibration_file = (
+            Path(cal_file_param) if cal_file_param
+            else Path(
+                    get_package_share_directory("sanad_perception")
+                ).parents[3] / "src" / "sanad_perception" / "sanad_perception" / "sensor_fusion" / "calibration.json"
+            )
+
         # ── State ─────────────────────────────────────────────────────────────
         self._cal_samples: list[float] = []
         self.delta_z: float = 0.0
@@ -120,6 +133,18 @@ class CalibrationNode(Node):
         self.bias_pub   = self.create_publisher(Float32, "/depth_bias",         latched_qos)
         self.status_pub = self.create_publisher(String,  "/calibration_status", latched_qos)
 
+        # Try to restore previous calibration before touching the sensors
+        if not self.get_parameter("force_recalibrate").value:
+            loaded = self._load_calibration()
+            if loaded is not None:
+                self.delta_z = loaded
+                self.is_calibrated = True
+                self._publish_loaded_calibration()
+                self.get_logger().info(
+                    f"Restored Δz={self.delta_z:+.4f} m from "
+                    f"{self.calibration_file} — idling."
+                )
+
         # ── Subscribers + synchronizer ────────────────────────────────────────
         self.rgbd_sub  = Subscriber(self, PointCloud2, rgbd_topic,  qos_profile=camera_qos)
         self.lidar_sub = Subscriber(self, LaserScan,   lidar_topic, qos_profile=lidar_qos)
@@ -139,6 +164,54 @@ class CalibrationNode(Node):
         self.get_logger().info(
             f"CalibrationNode started | target_frame={self.target_frame} | "
             f"attempts needed={self.cal_attempts}"
+        )
+
+    # ── Persistence helpers ────────────────────────────────────────────────
+
+    def _load_calibration(self) -> float | None:
+        """Read saved Δz from disk. Returns None if missing or corrupt."""
+        if not self.calibration_file.exists():
+            return None
+        try:
+            with self.calibration_file.open("r") as fh:
+                data = json.load(fh)
+            val = float(data["delta_z"])
+            if not np.isfinite(val):
+                raise ValueError("non-finite value")
+            return val
+        except Exception as exc:
+            self.get_logger().warn(
+                f"Failed to load {self.calibration_file}: {exc}"
+            )
+            return None
+
+    def _save_calibration(self, delta_z: float, std: float) -> None:
+        """Atomically write calibration metadata to disk."""
+        try:
+            self.calibration_file.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "delta_z": float(delta_z),
+                "std": float(std),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            # Write to temp file then rename for atomicity
+            tmp = self.calibration_file.with_suffix(".tmp")
+            with tmp.open("w") as fh:
+                json.dump(payload, fh, indent=2)
+            tmp.replace(self.calibration_file)
+            self.get_logger().info(
+                f"Calibration saved to {self.calibration_file}"
+            )
+        except Exception as exc:
+            self.get_logger().error(f"Failed to save calibration: {exc}")
+
+    def _publish_loaded_calibration(self) -> None:
+        """Publish a previously-restored bias so late joiners receive it."""
+        bias_msg = Float32()
+        bias_msg.data = self.delta_z
+        self.bias_pub.publish(bias_msg)
+        self._publish_status(
+            f"RESTORED | Δz = {self.delta_z:+.4f} m (from file)"
         )
 
     # ── TF helper ────────────────────────────────────────────────────────────
@@ -240,6 +313,8 @@ class CalibrationNode(Node):
         self.delta_z      = float(np.mean(self._cal_samples))
         self.is_calibrated = True
         std = float(np.std(self._cal_samples))
+
+        self._save_calibration(self.delta_z, std)   # <-- NEW
 
         self.get_logger().info(
             f"✅ Calibration complete | "
