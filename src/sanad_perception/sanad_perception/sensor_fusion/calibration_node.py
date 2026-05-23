@@ -74,8 +74,8 @@ class CalibrationNode(Node):
         self.declare_parameter("rgbd_topic",              "/realsense/points")
         self.declare_parameter("lidar_topic",             "/scan")
         self.declare_parameter("target_frame",            "base_footprint")
-        self.declare_parameter("calibration_attempts",    5)
-        self.declare_parameter("frontal_half_angle_deg",  20.0)
+        self.declare_parameter("calibration_attempts",    10)
+        self.declare_parameter("frontal_half_angle_deg",  25.0)
         self.declare_parameter("min_height",              0.1)
         self.declare_parameter("max_height",              2.0)
 

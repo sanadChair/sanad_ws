@@ -77,13 +77,14 @@ class FusionNode(Node):
         self.declare_parameter("angle_increment",   0.00581)   # ~0.333 °
         self.declare_parameter("range_min",         0.1)
         self.declare_parameter("range_max",        12.0)
+        self.declare_parameter("rgbd_trust_max_range", 2.5)  # Beyond this, trust RGBD less (for fusion)
 
         # ── Height filter ─────────────────────────────────────────────────────
         self.declare_parameter("min_height",  0.1)
         self.declare_parameter("max_height",  2.0)
 
         # ── Fusion parameters ─────────────────────────────────────────────────
-        self.declare_parameter("sigma_rgbd",  1.5)
+        self.declare_parameter("sigma_rgbd",  1.0)  # Range uncertainty (std dev) of RGBD sensor, in meters
         self.declare_parameter("alpha",       1.0)
 
         # ── Topics / frames ───────────────────────────────────────────────────
@@ -106,6 +107,7 @@ class FusionNode(Node):
         self.sigma_rgbd      = self.get_parameter("sigma_rgbd").value
         self.alpha           = self.get_parameter("alpha").value
         self.target_frame    = self.get_parameter("target_frame").value
+        self.rgbd_trust_max_range = self.get_parameter("rgbd_trust_max_range").value
         rgbd_topic           = self.get_parameter("rgbd_topic").value
         lidar_topic          = self.get_parameter("lidar_topic").value
         manual_delta_z       = self.get_parameter("manual_delta_z").value
@@ -382,6 +384,7 @@ class FusionNode(Node):
             range_min=self.range_min,
             sigma_rgbd=self.sigma_rgbd,
             alpha=self.alpha,
+            rgbd_trust_max_range=self.rgbd_trust_max_range,
         )
 
         out = LaserScan()

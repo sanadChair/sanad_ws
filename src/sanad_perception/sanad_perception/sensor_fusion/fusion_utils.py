@@ -354,6 +354,7 @@ def range_adaptive_fusion(
     range_min: float,
     sigma_rgbd: float = 1.5,
     alpha: float = 1.0,
+    rgbd_trust_max_range: float = 2.5,
 ) -> np.ndarray:
     """
     Fuse LiDAR and RGBD bin arrays with range-adaptive confidence weights.
@@ -397,7 +398,7 @@ def range_adaptive_fusion(
     # RGBD only — discard beyond 3 m (uncalibrated error too large)
     rgbd_only = rgbd_valid & ~lidar_valid
     r_rgbd_only = rgbd_bins[rgbd_only]
-    fused[rgbd_only] = np.where(r_rgbd_only < 3.0, r_rgbd_only, range_max)
+    fused[rgbd_only] = np.where(r_rgbd_only < rgbd_trust_max_range, r_rgbd_only, range_max)
 
     # Both valid — range-adaptive weighted average
     r_l = lidar_bins[both_valid]
