@@ -29,6 +29,7 @@ setup(
             'calibration_node    = sanad_perception.sensor_fusion.calibration_node:main',
             'fusion_node    = sanad_perception.sensor_fusion.fusion_node:main',
             'fusion_bringup    = sanad_perception.sensor_fusion.fusion_bringup:main',
+            'depth_test_node    = sanad_perception.sensor_fusion.depth_test_node:main',
         ],
     },
 )
