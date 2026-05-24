@@ -841,19 +841,21 @@
 
           <waypoint>
             <time>0.0</time>
-            <pose>1.0 0.0 1.0519 0 0 0.0</pose>
+            <pose>4.9 0.0 1.0519 0 0 0.0</pose>
           </waypoint>
 
           <waypoint>
-            <time>2.4</time>
+            <time>5.0</time>
             <pose>5.0 0.0 1.0519 0 0 0.0</pose>
           </waypoint>
 
           <!-- <waypoint>
-            <time>2.8</time>
-            <pose>4.2 1.5 1.0519 0 0 -1.5708</pose>
-          </waypoint>
+            <time>4.0</time>
+            <pose>5.0 -3.0 1.0519 0 0 -1.5708</pose>
+          </waypoint> -->
 
+
+ <!--
           <waypoint>
             <time>6.4</time>
             <pose>4.2 -1.0 1.0519 0 0 -1.5708</pose>

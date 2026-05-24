@@ -149,11 +149,36 @@ class FollowNode(Node):
     def _on_camera_info(self, msg: CameraInfo):
         if self._fx is not None:
             return
-        self._fx, self._fy = msg.k[0], msg.k[4]
-        self._cx, self._cy = msg.k[2], msg.k[5]
+
+        fx_raw = msg.k[0]
+        fy_raw = msg.k[4]
+        cx_raw = msg.k[2]
+        cy_raw = msg.k[5]
+
+        # If K matrix was calibrated at a lower resolution, scale up to match
+        # the actual image. cx should sit near width/2 for a centred lens.
+        scale_x = (msg.width  / 2.0) / cx_raw if cx_raw > 0 else 1.0
+        scale_y = (msg.height / 2.0) / cy_raw if cy_raw > 0 else 1.0
+
+        if abs(scale_x - 1.0) > 0.05:
+            self.get_logger().warn(
+                f'Intrinsic/resolution mismatch detected — '
+                f'K matrix is for {int(msg.width/scale_x)}×{int(msg.height/scale_y)} '
+                f'but image is {msg.width}×{msg.height}. '
+                f'Scaling intrinsics by {scale_x:.2f}×.'
+            )
+
+        self._fx = fx_raw * scale_x
+        self._fy = fy_raw * scale_y
+        self._cx = cx_raw * scale_x
+        self._cy = cy_raw * scale_y
+        self._camera_frame = msg.header.frame_id
+
         self.get_logger().info(
-            f'Intrinsics: fx={self._fx:.1f} fy={self._fy:.1f} '
-            f'cx={self._cx:.1f} cy={self._cy:.1f}'
+            f'Intrinsics ready [{msg.width}×{msg.height}] '
+            f'fx={self._fx:.1f} fy={self._fy:.1f} '
+            f'cx={self._cx:.1f} cy={self._cy:.1f} '
+            f'frame={self._camera_frame}'
         )
 
     def _to_map_pose(self, track: TrackedPerson) -> PoseStamped | None:
@@ -165,12 +190,19 @@ class FollowNode(Node):
         x = (float(track.centroid_x) - self._cx) * z / self._fx
         y = (float(track.centroid_y) - self._cy) * z / self._fy
 
+        # depth_camera_link is ROS convention (X-fwd, Y-left, Z-up)
+        # optical convention is (Z-fwd, X-right, Y-down)
+        # Rotation: optical→link:  x_link = z_opt,  y_link = -x_opt,  z_link = -y_opt
         point_cam = PointStamped()
         point_cam.header.frame_id = self._camera_frame
         point_cam.header.stamp    = track.header.stamp
-        point_cam.point.x = x
-        point_cam.point.y = y
-        point_cam.point.z = z
+        point_cam.point.x =  z   # optical Z  → link X (forward)
+        point_cam.point.y = -x   # optical X  → link Y (negated, left)
+        point_cam.point.z = -y   # optical Y  → link Z (negated, up)
+        # self.get_logger().info(
+        #     f'Back-projected camera point: ({point_cam.point.x}, '
+        #     f'{point_cam.point.y}, {point_cam.point.z}) in {self._camera_frame}'
+        # )
 
         try:
             point_map = self._tf_buffer.transform(
@@ -210,6 +242,7 @@ class FollowNode(Node):
     # =========================================================================
 
     def _on_target(self, track: TrackedPerson):
+        self.get_logger().info('_on_target called', throttle_duration_sec=0.5)  # ← add temporarily
         self._watchdog.reset()
 
         if self._fx is None:
@@ -222,6 +255,12 @@ class FollowNode(Node):
         pose = self._to_map_pose(track)
         if pose is None:
             return
+        
+        self.get_logger().info(
+            f'Map goal → x={pose.pose.position.x:.2f} y={pose.pose.position.y:.2f} '
+            f'(person depth={track.depth_m:.2f}m  pixel={track.centroid_x:.0f},{track.centroid_y:.0f})',
+            throttle_duration_sec=1.0,
+        )
 
         if self._pose_pub:
             self._pose_pub.publish(pose)
@@ -300,16 +339,22 @@ class FollowNode(Node):
                 self._goal_handle.status not in _TERMINAL)
 
     def _send_goal(self, pose: PoseStamped, person_pos=None):
-        if self._goal_active():
-            self._goal_handle.cancel_goal()
-
-        self._goal_pending = True   # guard against race until _on_goal_accepted fires
-        future = self._action.send_goal_async(NavigateToPose.Goal(pose=pose))
-        future.add_done_callback(self._on_goal_accepted)
-
         self._last_sent_goal_pos = pose.pose.position
         self._last_person_pos    = person_pos
         self._last_goal_time     = self.get_clock().now().nanoseconds * 1e-9
+
+        if self._goal_active():
+            cancel_future = self._goal_handle.cancel_goal_async()
+            cancel_future.add_done_callback(
+                lambda _: self._do_send_goal(pose)
+            )
+        else:
+            self._do_send_goal(pose)
+
+    def _do_send_goal(self, pose: PoseStamped):
+        self._goal_pending = True
+        future = self._action.send_goal_async(NavigateToPose.Goal(pose=pose))
+        future.add_done_callback(self._on_goal_accepted)
 
     def _on_goal_accepted(self, future):
         self._goal_pending = False   # acceptance resolved either way
@@ -339,6 +384,8 @@ class FollowNode(Node):
             self._goal_handle.cancel_goal()
         self._last_person_pos    = None
         self._last_sent_goal_pos = None
+        self._goal_handle  = None
+        self._goal_pending = False
 
 
 # ── entry point ──────────────────────────────────────────────────────────────
