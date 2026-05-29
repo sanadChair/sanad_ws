@@ -12,7 +12,16 @@ setup(
             ["resource/" + package_name],
         ),
         ("share/" + package_name, ["package.xml"]),
-        ("share/" + package_name + "/config", ["config/base_prompt.md"]),
+        (
+            "share/" + package_name + "/config",
+            [
+                "config/current_lang.yaml",
+                "config/system_prompt.yaml",
+                "config/telegram_config.yaml",
+                "config/telegram_contacts.yaml",
+                "config/telegram_messages.yaml",
+            ],
+        ),
         ("share/" + package_name + "/launch", ["launch/commander.launch.py"]),
     ],
     install_requires=["setuptools"],
@@ -31,6 +40,9 @@ setup(
             "commander = sanad_voice_control.commander:main",
             "tts_node = sanad_voice_control.tts_node:main",
             "whisper_node = sanad_voice_control.whisper_node:main",
+            "telegram_node = sanad_voice_control.telegram_node:main",
+            "console_input_node = sanad_voice_control.console_input_node:main",
+            "llm_node = sanad_voice_control.llm_node:main",
         ],
     },
 )

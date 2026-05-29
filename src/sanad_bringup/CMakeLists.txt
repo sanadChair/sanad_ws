@@ -15,4 +15,10 @@ install(
   DESTINATION share/${PROJECT_NAME}/
 )
 
+install(
+  FILES .env .env.example
+  DESTINATION share/${PROJECT_NAME}/
+  OPTIONAL
+)
+
 ament_package()
