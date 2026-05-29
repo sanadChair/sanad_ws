@@ -1,4 +1,4 @@
-string name
+string id
 ---
 bool success
 sanad_interfaces/Room room

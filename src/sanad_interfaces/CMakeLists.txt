@@ -9,15 +9,21 @@ find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Room.msg"
+  "msg/RoomEvent.msg"
   "msg/Device.msg"
-  "srv/GetRoom.srv" 
-  "srv/GetAllRooms.srv"
+  "msg/DeviceEvent.msg"
+  "srv/ControlDevice.srv"
+  "srv/DeleteDevice.srv"
   "srv/DeleteRoom.srv"
-  "srv/AddRoom.srv"
-  "srv/UpdateRoom.srv"
+  "srv/GetAllRooms.srv"
+  "srv/GetAllDevices.srv"
+  "srv/GetRoom.srv" 
+  "srv/GetDevice.srv" 
+  "srv/MoveDevice.srv" 
   "srv/NavigateToRoom.srv"
   "srv/RegisterDevice.srv"
-  "srv/DeleteDevice.srv"
+  "srv/RegisterRoom.srv"
+  "srv/UpdateRoom.srv"
  )
 ament_export_dependencies(rosidl_default_runtime)
 
