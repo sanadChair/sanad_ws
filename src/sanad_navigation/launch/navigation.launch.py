@@ -147,6 +147,6 @@ def generate_launch_description():
             nav2_behavior,
             nav2_lifecycle_manager,
             front_filter,
-            rear_filter,
+            # rear_filter,
         ]
     )

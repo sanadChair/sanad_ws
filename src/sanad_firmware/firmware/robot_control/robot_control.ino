@@ -56,7 +56,7 @@
 
   double Kp_l = 40;
   double Ki_l = 120;
-  double Kd_l = 0.01;
+  double Kd_l = 0.0;
 
   // PID controllers
   PID rightMotor(
@@ -313,11 +313,11 @@
   {
     if(digitalRead(ENCODER1_B) == HIGH)
     {
-      right_wheel_sign = "p";
+      right_wheel_sign = "n";
     }
     else
     {
-      right_wheel_sign = "n";
+      right_wheel_sign = "p";
     }
 
     right_encoder_counter++;
@@ -328,11 +328,11 @@
   {
     if(digitalRead(ENCODER2_B) == HIGH)
     {
-      left_wheel_sign = "p";
+      left_wheel_sign = "n";
     }
     else
     {
-      left_wheel_sign = "n";
+      left_wheel_sign = "p";
     }
 
     left_encoder_counter++;

@@ -20,7 +20,7 @@ costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: scan_front_filtered scan_rear_filtered
+        observation_sources: scan_front_filtered
         scan_front_filtered:
           topic: /scan_front_filtered
           max_obstacle_height: 2.0
@@ -31,16 +31,16 @@ costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
           obstacle_min_range: 0.0
-        scan_rear_filtered:
-          topic: /scan_rear_filtered
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
+        # scan_rear_filtered:
+        #   topic: /scan_rear_filtered
+        #   max_obstacle_height: 2.0
+        #   clearing: True
+        #   marking: True
+        #   data_type: "LaserScan"
+        #   raytrace_max_range: 3.0
+        #   raytrace_min_range: 0.0
+        #   obstacle_max_range: 2.5
+        #   obstacle_min_range: 0.0
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
