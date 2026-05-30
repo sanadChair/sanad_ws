@@ -23,6 +23,16 @@ def generate_launch_description():
                     'use_cloud': LaunchConfiguration('use_cloud')
                 }]
             ),
+            # TTS Speech Synthesis Node
+            Node(
+                package="sanad_voice_control",
+                executable="tts_node",
+                name="tts_node",
+                output="screen",
+                parameters=[{
+                    'use_cloud': LaunchConfiguration('use_cloud')
+                }]
+            ),
             # Central orchestrator/broker
             Node(
                 package="sanad_voice_control",
