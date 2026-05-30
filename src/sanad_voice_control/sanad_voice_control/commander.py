@@ -241,6 +241,11 @@ class LLMCommander(Node):
             
             self.chat_history.append({"role": "assistant", "content": raw_output})
             
+            # Sanitize raw audio paths in chat history for future context
+            for msg in self.chat_history:
+                if msg.get("role") == "user" and isinstance(msg.get("content"), str) and msg["content"].startswith("audio://"):
+                    msg["content"] = "[Voice Command]"
+            
             # Update state variables internally based on LLM output
             try:
                 json_string = self.extract_json(raw_output)

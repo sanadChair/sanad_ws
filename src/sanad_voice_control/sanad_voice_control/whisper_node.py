@@ -51,7 +51,10 @@ class BulletproofWhisperNode(Node):
         self.is_recording = False
         self.recording_frames = []
         self.recording_thread = None
-        self.continuous_listener_active = True
+        self.continuous_listener_active = False
+        self.alt_pressed = False
+        import time
+        self.last_alt_time = 0.0
         
         # Setup pynput Listener
         try:
@@ -61,25 +64,35 @@ class BulletproofWhisperNode(Node):
                 on_release=self.on_release
             )
             self.pynput_listener.start()
-            self.get_logger().info("🎹 Global Keyboard PTT Listener active. Hold down 'p' to speak!")
+            self.get_logger().info("🎹 Global Keyboard PTT Listener active. Hold down 'Alt + p' to speak!")
         except Exception as e:
-            self.get_logger().warn(f"⚠️ Global Keyboard Listener failed to start: {e}. Fallback to continuous wake word mode.")
+            self.get_logger().warn(f"⚠️ Global Keyboard Listener failed to start: {e}.")
         
-        # Run continuous listener in background thread to avoid blocking spin()
-        import threading
-        self.listen_thread = threading.Thread(target=self.listen_loop, daemon=True)
-        self.listen_thread.start()
+        # Continuous listener is disabled per user request
+        self.listen_thread = None
         
-        self.get_logger().info("🎤 Pro Audio Node Ready. Ambient continuous listening enabled.")
+        self.get_logger().info("🎤 Pro Audio Node Ready. PTT Mode (Alt + p) enabled.")
 
     def on_press(self, key):
         try:
+            from pynput import keyboard
+            import time
+            
+            # Track alt state and update last event time
+            if key in [keyboard.Key.alt, keyboard.Key.alt_l, keyboard.Key.alt_r]:
+                self.alt_pressed = True
+                self.last_alt_time = time.time()
+                
             trigger_char = self.get_parameter('key_trigger').get_parameter_value().string_value
-            if hasattr(key, 'char') and key.char == trigger_char:
+            is_trigger_key = hasattr(key, 'char') and key.char == trigger_char
+            
+            # Only trigger recording if Alt was pressed within a recent 2.0 second window
+            is_alt_active = self.alt_pressed and (time.time() - self.last_alt_time < 2.0)
+            
+            if is_alt_active and is_trigger_key:
                 if not self.is_recording:
-                    self.get_logger().info(f"🔴 PTT Active: Key '{trigger_char}' held. Recording voice...")
+                    self.get_logger().info(f"🔴 PTT Active: Alt + '{trigger_char}' held. Recording voice...")
                     self.is_recording = True
-                    self.continuous_listener_active = False # Pause continuous audio
                     self.recording_frames = []
                     
                     import threading
@@ -90,18 +103,25 @@ class BulletproofWhisperNode(Node):
 
     def on_release(self, key):
         try:
+            from pynput import keyboard
             trigger_char = self.get_parameter('key_trigger').get_parameter_value().string_value
-            if hasattr(key, 'char') and key.char == trigger_char:
-                if self.is_recording:
-                    self.get_logger().info(f"🟩 PTT Released: Key '{trigger_char}' released. Processing...")
-                    self.is_recording = False
-                    if self.recording_thread:
-                        self.recording_thread.join()
-                        self.recording_thread = None
-                    
-                    import threading
-                    processing_thread = threading.Thread(target=self.process_ptt_audio)
-                    processing_thread.start()
+            is_trigger_key = hasattr(key, 'char') and key.char == trigger_char
+            is_alt_key = key in [keyboard.Key.alt, keyboard.Key.alt_l, keyboard.Key.alt_r]
+            
+            if is_alt_key:
+                self.alt_pressed = False
+                
+            # If trigger key 'p' is released, or if alt is released while recording:
+            if self.is_recording and (is_trigger_key or is_alt_key):
+                self.get_logger().info("🟩 PTT Released: Alt + P released. Processing...")
+                self.is_recording = False
+                if self.recording_thread:
+                    self.recording_thread.join()
+                    self.recording_thread = None
+                
+                import threading
+                processing_thread = threading.Thread(target=self.process_ptt_audio)
+                processing_thread.start()
         except Exception as e:
             self.get_logger().error(f"Error in PTT release: {e}")
 
@@ -144,17 +164,20 @@ class BulletproofWhisperNode(Node):
             use_cloud = self.get_parameter('use_cloud').get_parameter_value().bool_value
             
             if use_cloud:
-                transcript = self.transcribe_google_cloud(self.temp_wav)
+                self.get_logger().info("🌐 Cloud Mode Active: Sending audio directly to Gemini...")
+                msg = String()
+                msg.data = f"audio://{self.temp_wav}"
+                self.publisher_.publish(msg)
+                self.get_logger().info("🚀 Sent PTT Audio Command path directly!")
             else:
                 transcript = self.transcribe_local_whisper(self.temp_wav)
-                
-            if transcript:
-                self.get_logger().info(f"🗣️ Transcribed Command: '{transcript}'")
-                # Direct publishing (PTT bypasses wake-word)
-                msg = String()
-                msg.data = transcript
-                self.publisher_.publish(msg)
-                self.get_logger().info("🚀 Sent PTT Command directly!")
+                if transcript:
+                    self.get_logger().info(f"🗣️ Transcribed Command: '{transcript}'")
+                    # Direct publishing (PTT bypasses wake-word)
+                    msg = String()
+                    msg.data = transcript
+                    self.publisher_.publish(msg)
+                    self.get_logger().info("🚀 Sent PTT Command directly!")
                 
         except Exception as e:
             self.get_logger().error(f"PTT processing failed: {e}")
@@ -266,13 +289,20 @@ class BulletproofWhisperNode(Node):
                         for wake in active_wakes:
                             pattern = re.compile(re.escape(wake), re.IGNORECASE)
                             if pattern.search(output):
-                                parts = pattern.split(output, 1)
-                                if len(parts) > 1 and parts[1].strip():
-                                    cmd_text = parts[1].strip()
-                                    self.get_logger().info(f"🚀 Ambient Sending: {cmd_text}")
+                                use_cloud = self.get_parameter('use_cloud').get_parameter_value().bool_value
+                                if use_cloud:
+                                    self.get_logger().info("🚀 Ambient Wake Word Detected! Cloud mode active: sending raw audio to Gemini...")
                                     msg = String()
-                                    msg.data = cmd_text
+                                    msg.data = f"audio://{self.temp_wav}"
                                     self.publisher_.publish(msg)
+                                else:
+                                    parts = pattern.split(output, 1)
+                                    if len(parts) > 1 and parts[1].strip():
+                                        cmd_text = parts[1].strip()
+                                        self.get_logger().info(f"🚀 Ambient Sending: {cmd_text}")
+                                        msg = String()
+                                        msg.data = cmd_text
+                                        self.publisher_.publish(msg)
                                 break
                 except sr.WaitTimeoutError:
                     continue

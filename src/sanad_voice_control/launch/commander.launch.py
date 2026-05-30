@@ -47,13 +47,15 @@ def generate_launch_description():
                 name="telegram_node",
                 output="screen",
             ),
-            # Console Interactive Terminal Input Node
+            # Whisper / STT / PTT Recording Node
             Node(
                 package="sanad_voice_control",
-                executable="console_input_node",
-                name="console_input_node",
+                executable="whisper_node",
+                name="whisper_node",
                 output="screen",
-                emulate_tty=True,  # Crucial for reading stdin/input() in a launch file
+                parameters=[{
+                    'use_cloud': LaunchConfiguration('use_cloud')
+                }]
             ),
         ]
     )

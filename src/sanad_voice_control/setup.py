@@ -17,7 +17,6 @@ setup(
             [
                 "config/current_lang.yaml",
                 "config/system_prompt.yaml",
-                "config/telegram_config.yaml",
                 "config/telegram_contacts.yaml",
                 "config/telegram_messages.yaml",
             ],

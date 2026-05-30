@@ -63,18 +63,28 @@ class PiperTTSNode(Node):
         
         if use_cloud:
             try:
-                import wave
                 from google import genai
                 from google.genai import types
                 
-                self.get_logger().info("🌐 Calling Google Cloud Vertex AI (gemini-3.1-flash-tts-preview)...")
+                self.get_logger().info("🌐 Streaming Google Cloud Vertex AI...")
                 client = genai.Client(
                     vertexai=True,
                     project="polar-ray-459012-b0",
                     location="us-central1",
                 )
                 
-                response = client.models.generate_content(
+                # 1. Start aplay as a subprocess waiting for streaming input via stdin
+                # -t raw: tells aplay to expect raw PCM data
+                # -f S16_LE: Signed 16-bit Little Endian (setsampwidth(2))
+                # -r 24000: 24kHz sample rate
+                # -c 1: Mono channel
+                self.audio_process = subprocess.Popen(
+                    ['aplay', '-q', '-t', 'raw', '-f', 'S16_LE', '-r', '24000', '-c', '1'],
+                    stdin=subprocess.PIPE
+                )
+                
+                # 2. Use the streaming variant of the API
+                response_stream = client.models.generate_content_stream(
                     model="gemini-3.1-flash-tts-preview",
                     contents=text_to_speak,
                     config=types.GenerateContentConfig(
@@ -89,21 +99,30 @@ class PiperTTSNode(Node):
                     ),
                 )
                 
-                audio_data = response.candidates[0].content.parts[0].inline_data.data
+                # 3. Pipe chunks directly into aplay as they arrive
+                for chunk in response_stream:
+                    # Check if another process interrupted this speech mid-stream
+                    if self.audio_process.poll() is not None:
+                        break
+                        
+                    try:
+                        if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
+                            audio_bytes = chunk.candidates[0].content.parts[0].inline_data.data
+                            if audio_bytes:
+                                self.audio_process.stdin.write(audio_bytes)
+                                self.audio_process.stdin.flush()
+                    except (IndexError, AttributeError, TypeError):
+                        continue
                 
-                # Save the PCM data to WAV
-                with wave.open(self.temp_audio_file, "wb") as wf:
-                    wf.setnchannels(1)
-                    wf.setsampwidth(2)
-                    wf.setframerate(24000)
-                    wf.writeframes(audio_data)
-                    
-                # Play the audio ASYNCHRONOUSLY using Popen
-                self.audio_process = subprocess.Popen(['aplay', '-q', self.temp_audio_file])
+                # Close the stream when finished so aplay knows to exit
+                if self.audio_process.stdin:
+                    self.audio_process.stdin.close()
                 
             except Exception as e:
-                self.get_logger().error(f"❌ Google Cloud TTS failed: {e}. Falling back to local Piper.")
-                self.execute_local_piper(text_to_speak)
+                self.get_logger().error(f"❌ Google Cloud TTS failed: {e}.")
+                # Ensure stdin is closed on failure
+                if self.audio_process and self.audio_process.stdin:
+                    self.audio_process.stdin.close()
         else:
             self.execute_local_piper(text_to_speak)
 
