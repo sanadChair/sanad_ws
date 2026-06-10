@@ -1,9 +1,9 @@
 kitchen:
   coordinates:
-    min_x: 0.0
-    max_x: 5.0
-    min_y: 0.0
-    max_y: 5.0
+    min_x: 4.65
+    max_x: 8.7
+    min_y: 3.1
+    max_y: -4.8
     theta: 0.0
     pose:
       x: 6.558255195617676
@@ -24,10 +24,10 @@ kitchen:
       state_values: [on, "24"]
 living_room:
   coordinates:
-    min_x: 5.0
-    max_x: 10.0
-    min_y: 0.0
-    max_y: 5.0
+    min_x: 4.66
+    max_x: -2.37
+    min_y: 5.5
+    max_y: -5.3
     theta: 0.0
     pose:
       x: 0.8284147381782532

@@ -24,4 +24,10 @@ def generate_launch_description():
         output="screen",
     )
 
-    return LaunchDescription([room_manager_node, room_nav_node, smart_home_device_node])
+    return LaunchDescription(
+        [
+            room_manager_node,
+            room_nav_node,
+            smart_home_device_node,
+        ]
+    )
