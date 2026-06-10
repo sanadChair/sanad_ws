@@ -848,49 +848,6 @@
             <time>5.0</time>
             <pose>5.0 0.0 1.0519 0 0 0.0</pose>
           </waypoint>
-
-          <!-- <waypoint>
-            <time>4.0</time>
-            <pose>5.0 -3.0 1.0519 0 0 -1.5708</pose>
-          </waypoint> -->
-
-
- <!--
-          <waypoint>
-            <time>6.4</time>
-            <pose>4.2 -1.0 1.0519 0 0 -1.5708</pose>
-          </waypoint>
-
-          <waypoint>
-            <time>6.8</time>
-            <pose>4.2 -1.0 1.0519 0 0 3.1416</pose>
-          </waypoint>
-
-          <waypoint>
-            <time>11.4</time>
-            <pose>1.0 -1.0 1.0519 0 0 3.1416</pose>
-          </waypoint>
-
-          <waypoint>
-            <time>11.8</time>
-            <pose>1.0 -1.0 1.0519 0 0 1.5708</pose>
-          </waypoint>
-
-          <waypoint>
-            <time>15.4</time>
-            <pose>1.0 1.5 1.0519 0 0 1.5708</pose>
-          </waypoint>
-
-          <waypoint>
-            <time>15.8</time>
-            <pose>1.0 1.5 1.0519 0 0 0.0</pose>
-          </waypoint>
-
-          <waypoint>
-            <time>17.9</time>
-            <pose>2.5 1.5 1.0519 0 0 0.0</pose>
-          </waypoint> -->
-
         </trajectory>
       </script>
 
@@ -900,30 +857,46 @@
 
     </actor>
 
-    <!-- ============================================================
-         STATIC HUMAN — Fixed position in the living room
-         
-         Position: x=2.5, y=1.5, z=0 (living room corridor)
-         Facing: East (yaw=0)
-         
-         The actor has no trajectory/script so it remains stationary.
-         To change the position, modify the <pose> values below.
-         Format: <pose>x y z roll pitch yaw</pose>
-         
-         Example positions:
-           - Kitchen area:    <pose>7.0 -2.0 0 0 0 -1.57</pose>
-           - Bedroom:         <pose>-6.0 0.0 0 0 0 0</pose>
-           - Near TV:         <pose>1.5 -3.0 0 0 0 1.57</pose>
-           - Balcony area:    <pose>0.0 3.5 0 0 0 0</pose>
-         ============================================================ -->
-    <!-- <actor name="static_human">
-      <pose>2.5 0 0 0 0 0</pose>
+    <actor name="distractor_person">
+
+      <pose>1.0 0 0 0 0 0</pose>
 
       <skin>
         <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
         <scale>1.0</scale>
-      </skin>
-    </actor> -->
+    </skin>
+
+      <animation name="walking">
+        <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
+        <scale>1.0</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+
+      <script>
+        <loop>true</loop>
+        <delay_start>0.0</delay_start>
+        <auto_start>true</auto_start>
+
+        <trajectory id="0" type="walking">
+
+          <waypoint>
+            <time>0.0</time>
+            <pose>2.9 0.5 1.0519 0 0 0.0</pose>
+          </waypoint>
+
+          <waypoint>
+            <time>5.0</time>
+            <pose>3.0 0.5 1.0519 0 0 0.0</pose>
+          </waypoint>
+        </trajectory>
+      </script>
+
+        <plugin name="ignition::gazebo::systems::ActorPlugin"
+              filename="ignition-gazebo-actor-trajectory-plugin">
+        </plugin>
+
+    </actor>
+
 
 
   </world>

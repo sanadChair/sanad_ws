@@ -57,14 +57,16 @@ _DEFAULTS = {
 
     # ── goal management ──────────────────────────────────────────────────────
     'follow_distance_m':   1.0,    # stop this far behind the person
-    'min_person_disp_m':   0.20,   # min person movement to trigger a new goal
+    'min_person_disp_m':   0.15,   # min person movement to trigger a new goal
     'min_goal_disp_m':     0.40,   # min goal displacement before cancelling active goal
-    'goal_update_hz':      1.0,    # max rate at which new goals are sent
-    'lost_timeout':        2.0,    # seconds without a pose before cancelling
+    'goal_update_hz':      2.0,    # max rate at which new goals are sent
+    'lost_timeout':        4.0,    # seconds without a pose before cancelling
     'base_frame':         'base_link',
 
     # ── debug ────────────────────────────────────────────────────────────────
     'publish_pose':        False,  # publish /person/pose for external monitoring
+    'ema_alpha': 0.3,   # lower = smoother but more lag (0.2–0.4 works well)
+    'reid_max_dist_m': 1.5,   # max map distance to accept as same person
 }
 
 
@@ -108,11 +110,19 @@ class FollowNode(Node):
         self._goal_period     = 1.0 / p('goal_update_hz')
         self._lost_timeout    = p('lost_timeout')
         self._base_frame      = p('base_frame')
+        self._ema_alpha   = p('ema_alpha')
+
+        self._smooth_pos  = None   # geometry_msgs Point
+        self._last_known_map_pos = None   # Point in map frame
+        self._prev_person_pos  = None
+        self._prev_person_time = 0.0
 
         self._goal_handle        = None
         self._last_person_pos    = None
         self._last_sent_goal_pos = None
         self._last_goal_time     = 0.0
+
+        self._goal_handle_pose = None
 
 
         # ── subscriptions ────────────────────────────────────────────────────
@@ -142,6 +152,29 @@ class FollowNode(Node):
         self._action.wait_for_server()
         self.get_logger().info('Nav2 action server connected')
 
+    def _smooth_person_pos(self, raw_pos):
+        """EMA filter on person map position."""
+        if self._smooth_pos is None:
+            self._smooth_pos = raw_pos
+            return raw_pos
+
+        a = self._ema_alpha
+        self._smooth_pos.x = a * raw_pos.x + (1 - a) * self._smooth_pos.x
+        self._smooth_pos.y = a * raw_pos.y + (1 - a) * self._smooth_pos.y
+        return self._smooth_pos
+
+    def _estimate_velocity(self, person_pos):
+        now = self.get_clock().now().nanoseconds * 1e-9
+        vx = vy = 0.0
+        if self._prev_person_pos is not None:
+            dt = now - self._prev_person_time
+            if 0.05 < dt < 2.0:   # ignore stale or identical stamps
+                vx = (person_pos.x - self._prev_person_pos.x) / dt
+                vy = (person_pos.y - self._prev_person_pos.y) / dt
+        self._prev_person_pos  = person_pos
+        self._prev_person_time = now
+        return vx, vy
+    
     # =========================================================================
     # § POSE ESTIMATION
     # =========================================================================
@@ -266,7 +299,20 @@ class FollowNode(Node):
             self._pose_pub.publish(pose)
             self.get_logger().info(f"Published : {pose}")
 
-        person_pos = pose.pose.position
+        # person_pos = self._smooth_person_pos(pose.pose.position)
+        raw_pos    = pose.pose.position
+        person_pos = self._smooth_person_pos(raw_pos)
+        vx, vy     = self._estimate_velocity(person_pos)
+
+        # Look 0.5s ahead — clamp speed to 1.5 m/s to ignore noise spikes
+        lookahead  = 0.5
+        speed      = math.hypot(vx, vy)
+        if speed > 1.5:
+            vx, vy = vx * 1.5 / speed, vy * 1.5 / speed
+
+        predicted_pos   = type(person_pos)()
+        predicted_pos.x = person_pos.x + vx * lookahead
+        predicted_pos.y = person_pos.y + vy * lookahead
 
         if not self._should_update(person_pos):
             return
@@ -275,7 +321,7 @@ class FollowNode(Node):
         if robot_pos is None:
             return
 
-        goal_pose = self._compute_goal(person_pos, robot_pos)
+        goal_pose = self._compute_goal(predicted_pos, robot_pos)
         if goal_pose is None:
             return
 
@@ -290,11 +336,27 @@ class FollowNode(Node):
 
     def _should_update(self, person_pos) -> bool:
         now = self.get_clock().now().nanoseconds * 1e-9
+
+        # Rate limit always applies
         if (now - self._last_goal_time) < self._goal_period:
             return False
+        
+        # If person hasn't moved much, check if the ROBOT has drifted far enough
+        # from the last sent goal that we need to re-plan (detour scenario)
         if (self._last_person_pos is not None and
                 _dist2d(person_pos, self._last_person_pos) < self._min_person_disp):
+
+            # Allow re-planning if robot has drifted away from the sent goal
+            if self._last_sent_goal_pos is not None:
+                robot_pos = self._robot_position()
+                if robot_pos is not None:
+                    robot_to_goal = _dist2d(robot_pos, self._last_sent_goal_pos)
+                    # If robot moved significantly away from where goal was sent from,
+                    # re-evaluate even if person hasn't moved
+                    if robot_to_goal > self._min_goal_disp:
+                        return True
             return False
+        
         return True
 
     def _robot_position(self):
@@ -344,15 +406,20 @@ class FollowNode(Node):
         self._last_goal_time     = self.get_clock().now().nanoseconds * 1e-9
 
         if self._goal_active():
+            # Only cancel if goal has moved substantially — avoids
+            # interrupting Nav2 mid-obstacle-detour for a trivial update
+            if (self._last_sent_goal_pos is not None and
+                    _dist2d(pose.pose.position, self._goal_handle_pose)
+                    < self._min_goal_disp * 1.5):   # slightly wider than the gate above
+                return   # let current goal finish, it's close enough
             cancel_future = self._goal_handle.cancel_goal_async()
-            cancel_future.add_done_callback(
-                lambda _: self._do_send_goal(pose)
-            )
+            cancel_future.add_done_callback(lambda _: self._do_send_goal(pose))
         else:
             self._do_send_goal(pose)
 
     def _do_send_goal(self, pose: PoseStamped):
         self._goal_pending = True
+        self._goal_handle_pose = pose.pose.position
         future = self._action.send_goal_async(NavigateToPose.Goal(pose=pose))
         future.add_done_callback(self._on_goal_accepted)
 
@@ -382,6 +449,7 @@ class FollowNode(Node):
         if self._goal_active():
             self.get_logger().info('Person lost — cancelling goal')
             self._goal_handle.cancel_goal()
+        self._smooth_pos = None
         self._last_person_pos    = None
         self._last_sent_goal_pos = None
         self._goal_handle  = None
@@ -393,8 +461,10 @@ class FollowNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = FollowNode()
+    executor = rclpy.executors.MultiThreadedExecutor()
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:

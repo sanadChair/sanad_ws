@@ -12,6 +12,7 @@ import cv2 as cv
 import threading
 from collections import deque
 import torch
+import math
 
 from sanad_interfaces.msg import TrackedPerson, TrackedPersonArray
 from .depth_utils import sample_depth
@@ -42,6 +43,7 @@ _DEFAULTS = {
     'depth_topic':          "/realsense/depth_image",
     'device': 'cuda:0',
     'lost_timeout':           2.0, # seconds before releasing a latched target
+    'reid_max_dist_m': 1.5,
 }
 
 
@@ -62,6 +64,9 @@ class PerceptionNode(Node):
         self._kernel = p('depth_kernel_size')
         self._debug  = p('debug_viz')
         self._lost_timeout = p('lost_timeout')
+        self._reid_max_dist = p('reid_max_dist_m')
+
+        self._last_known_pos = None
 
         self.device  = p("device")
         if 'cuda' in self.device and not torch.cuda.is_available():
@@ -228,34 +233,39 @@ class PerceptionNode(Node):
     # ── target selection ──────────────────────────────────────────────────────
 
     def _select_target(self, tracks: list) -> TrackedPerson | None:
-        """
-        Latch onto the closest valid person; hold the latch for lost_timeout
-        seconds after they disappear before resetting.
-        """
         now = self.get_clock().now().nanoseconds * 1e-9
 
         if self._target_id >= 0:
             match = next((t for t in tracks if t.track_id == self._target_id), None)
             if match is not None:
                 self._last_seen_time = now
+                self._last_known_pos = (match.centroid_x, match.centroid_y, match.depth_m)
                 return match
-            # Target missing — wait out the timeout before resetting
             if (now - self._last_seen_time) < self._lost_timeout:
                 return None
-            self.get_logger().info(
-                f'Target track_id={self._target_id} lost — resetting'
-            )
+            self.get_logger().info(f'Target {self._target_id} lost — attempting re-id')
             self._target_id = -1
 
-        # No target yet — pick the closest person with a valid depth reading
         valid = [t for t in tracks if t.depth_valid]
         if not valid:
             return None
 
-        target = min(valid, key=lambda t: t.depth_m)
+        # Re-id: if we have a last known pixel position, prefer spatially closest
+        if self._last_known_pos is not None:
+            lx, ly, _ = self._last_known_pos
+            def spatial_dist(t):
+                return math.hypot(t.centroid_x - lx, t.centroid_y - ly)
+            target = min(valid, key=spatial_dist)
+            self.get_logger().info(
+                f'Re-id: picked track_id={target.track_id} '
+                f'(pixel dist={spatial_dist(target):.1f}px from last known)'
+            )
+        else:
+            target = min(valid, key=lambda t: t.depth_m)
+
         self._target_id      = target.track_id
         self._last_seen_time = now
-        self.get_logger().info(f'Acquired target track_id={self._target_id}')
+        self._last_known_pos = (target.centroid_x, target.centroid_y, target.depth_m)
         return target
 
     # ── track builder ─────────────────────────────────────────────────────────
