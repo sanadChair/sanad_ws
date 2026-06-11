@@ -29,6 +29,7 @@ setup(
             "room_manager_node = sanad_room_manager.room_manager_node:main",
             "room_nav = sanad_room_manager.room_nav:main",
             "smart_home_device_node = sanad_room_manager.smart_home_device_node:main",
+            "room_location_tracker_node = sanad_room_manager.room_location_tracker_node:main",
         ],
     },
 )
