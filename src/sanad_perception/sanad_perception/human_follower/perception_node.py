@@ -1,5 +1,6 @@
 """RealSense RGB+Depth → YOLO + ByteTrack → single TrackedPerson (selected target)."""
 
+import time
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -13,6 +14,8 @@ import threading
 from collections import deque
 import torch
 import math
+from pathlib import Path
+from ament_index_python.packages import get_package_share_directory
 
 from sanad_interfaces.msg import TrackedPerson, TrackedPersonArray
 from .depth_utils import sample_depth
@@ -32,12 +35,12 @@ _DEBUG_QOS = QoSProfile(
 
 
 _DEFAULTS = {
-    'model_path':           "yolo26n.pt",
+    'model_path':           "yolo26n.engine",
     'confidence_threshold':  0.40,
     'iou_threshold':         0.45,
     'depth_bbox_shrink':     0.60,
     'depth_kernel_size':     7,
-    'sync_slop':             0.15,
+    'sync_slop':             0.2, # seconds for approximate sync
     'debug_viz':             True,
     'rgb_topic':            "/realsense/image",
     'depth_topic':          "/realsense/depth_image",
@@ -66,6 +69,10 @@ class PerceptionNode(Node):
         self._lost_timeout = p('lost_timeout')
         self._reid_max_dist = p('reid_max_dist_m')
 
+        self.model_path = Path(
+                    get_package_share_directory("sanad_perception")
+                ).parents[3] / "src" / "sanad_perception" / "sanad_perception" / "human_follower" / p('model_path')
+
         self._last_known_pos = None
 
         self.device  = p("device")
@@ -77,7 +84,7 @@ class PerceptionNode(Node):
             self.device = 'cpu'
 
 
-        self._model  = self._load_model(p('model_path'))
+        self._model  = self._load_model(self.model_path)
 
         # ── target selection state ──────────────────────────────────────────
         self._target_id:       int   = -1
@@ -121,15 +128,24 @@ class PerceptionNode(Node):
 
     def _load_model(self, path: str) -> YOLO:
         self.get_logger().info(f'Loading model: {path}')
-        model = YOLO(path)
-        model.track(
-            np.zeros((480, 640, 3), dtype=np.uint8),
-            classes=[0],
-            tracker='bytetrack.yaml',
-            persist=True,
-            verbose=False,
-        )
-        self.get_logger().info('Model ready')
+        torch.backends.cudnn.benchmark = True
+        model = YOLO(path, task='detect')
+
+        dummy = np.zeros((480, 640, 3), dtype=np.uint8)
+        self.get_logger().info('Warming up...')
+        for i in range(5):                 # 5 iterations to stabilise
+            model.track(
+                dummy,
+                classes = [0],
+                conf    = self._conf,      # ← match production exactly
+                iou     = self._iou,
+                tracker = 'bytetrack.yaml',
+                persist = True,
+                verbose = False,
+                half    = True,            # ← match production exactly
+                device  = self.device,     # ← match production exactly
+            )
+        self.get_logger().info('Model warmed up and ready')
         return model
     
     # ── diagnostics ──────────────────────────────────────────────────────────
@@ -188,8 +204,15 @@ class PerceptionNode(Node):
             self.get_logger().error(f'Decode error: {e}')
             return
     
+        # self.get_logger().info(
+        #     f'Got frames: RGB {bgr.shape} Depth {depth_m.shape} | '
+        #     f'queue size={len(self._frame_queue)}',
+        #     throttle_duration_sec=2.0,
+        # )
 
-        t0 = self.get_clock().now()
+        # t0 = self.get_clock().now()
+        torch.cuda.synchronize()          # wait for any pending GPU work
+        t0 = time.perf_counter()
         results = self._model.track(
             bgr,
             classes=[0],
@@ -201,9 +224,12 @@ class PerceptionNode(Node):
             half=True,
             device=self.device,
         )
-        dt = (self.get_clock().now() - t0).nanoseconds * 1e-6  # ns → ms
+        # dt = (self.get_clock().now() - t0).nanoseconds * 1e-6  # ns → ms
+        torch.cuda.synchronize()          # wait for THIS call to finish
+        dt_ms = (time.perf_counter() - t0) * 1000
 
-        self.get_logger().info(f'Inference: {dt:.1f} ms', throttle_duration_sec=2.0)
+        # self.get_logger().info(f'Inference: {dt:.1f} ms', throttle_duration_sec=2.0)
+        
 
 
         r = results[0] if results else None
@@ -214,6 +240,13 @@ class PerceptionNode(Node):
                 self._make_track(rgb_msg.header, r.boxes, i, depth_m)
                 for i in range(len(r.boxes))
             ]
+
+        self.get_logger().info(
+            f'Inference {dt_ms:.1f}ms | '
+            f'tracks={len(tracks)} | '
+            f'GPU mem={torch.cuda.memory_allocated()/1e6:.0f}MB',
+            throttle_duration_sec=2.0,
+        )
 
         target = self._select_target(tracks)
         if target is not None:
