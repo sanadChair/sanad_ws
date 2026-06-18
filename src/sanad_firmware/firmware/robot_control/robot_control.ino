@@ -4,15 +4,15 @@
   #define RPWM1  5
   #define LPWM1  6
 
-  #define RPWM2  10
-  #define LPWM2  9
+  #define RPWM2  9
+  #define LPWM2  10
 
   // ================= ENCODER PINS =================
-  #define ENCODER1_A  2
-  #define ENCODER1_B  4
+  #define ENCODER1_A  3
+  #define ENCODER1_B  7
 
-  #define ENCODER2_A  3
-  #define ENCODER2_B  7
+  #define ENCODER2_A  2
+  #define ENCODER2_B  4
 
   // ================= ENCODERS =================
   volatile unsigned int right_encoder_counter = 0;
@@ -328,11 +328,11 @@
   {
     if(digitalRead(ENCODER2_B) == HIGH)
     {
-      left_wheel_sign = "n";
+      left_wheel_sign = "p";
     }
     else
     {
-      left_wheel_sign = "p";
+      left_wheel_sign = "n";
     }
 
     left_encoder_counter++;

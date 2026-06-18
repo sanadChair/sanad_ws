@@ -129,15 +129,14 @@ def generate_launch_description():
         [
             use_slam_arg,
             hardware_interface,
-            # laser_driver,
-            ldlidar_node,
+            # ldlidar_node,
             controller,
             joystick,
-            imu_driver_node,
-            localization,
-            slam,
-            navigation,
-            rviz_slam,
+            # imu_driver_node,
+            # localization,
+            # slam,
+            # navigation,
+            # rviz_slam,
             rviz_nav,
         ]
     )

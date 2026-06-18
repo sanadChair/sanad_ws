@@ -33,3 +33,4 @@ venv/
 Thumbs.db
 
 ROS.code-workspace
+src/sanad_bringup/.env
