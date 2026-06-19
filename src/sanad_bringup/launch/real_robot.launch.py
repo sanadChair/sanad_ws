@@ -170,7 +170,7 @@ def generate_launch_description():
             use_slam_arg,
             hardware_interface,
             rlidar_node,
-            llidar_node,
+            # llidar_node,
             controller,
             joystick,
             # imu_driver_node,
