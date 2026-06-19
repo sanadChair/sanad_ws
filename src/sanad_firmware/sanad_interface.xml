@@ -1,0 +1,10 @@
+<library path="sanad_firmware">
+    <class name="sanad_firmware/SanadInterface"
+      type="sanad_firmware::SanadInterface"
+      base_class_type="hardware_interface::SystemInterface"
+    >
+      <description>
+        Sanad Hardware Interface
+      </description>
+    </class>
+  </library>
