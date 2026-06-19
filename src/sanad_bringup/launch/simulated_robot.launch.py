@@ -3,20 +3,27 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
     use_slam = LaunchConfiguration("use_slam")
+    use_human = LaunchConfiguration("use_human")
+    world_config = LaunchConfiguration("world")
 
     use_slam_arg = DeclareLaunchArgument("use_slam", default_value="false")
+    use_human_arg = DeclareLaunchArgument("use_human", default_value="false")
+
     world_arg = DeclareLaunchArgument(
         name="world",
         default_value="small_house",
         description="Name of world to load (without .world extension)",
     )
+    chosen_world = PythonExpression([
+        "'small_house_w_human' if '", use_human, "' == 'true' else '", world_config, "'"
+    ])
 
     gazebo = IncludeLaunchDescription(
         os.path.join(
@@ -24,7 +31,7 @@ def generate_launch_description():
             "launch",
             "gazebo.launch.py",
         ),
-        launch_arguments={"world": LaunchConfiguration("world")}.items(),
+        launch_arguments={"world": chosen_world}.items(),
     )
 
     controller = IncludeLaunchDescription(
@@ -71,6 +78,16 @@ def generate_launch_description():
             "launch",
             "navigation.launch.py",
         ),
+        condition=UnlessCondition(use_human),
+    )
+
+    navigation_follow_person = IncludeLaunchDescription(
+        os.path.join(
+            get_package_share_directory("sanad_navigation"),
+            "launch",
+            "navigation.launch.py",
+        ),
+        condition=IfCondition(use_human),
     )
 
     room_manager = IncludeLaunchDescription(
@@ -107,6 +124,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             use_slam_arg,
+            use_human_arg,
             world_arg,
             gazebo,
             controller,
@@ -115,6 +133,7 @@ def generate_launch_description():
             localization,
             slam,
             navigation,
+            navigation_follow_person,
             room_manager,
             rviz,
         ]

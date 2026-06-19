@@ -34,3 +34,10 @@ Thumbs.db
 
 ROS.code-workspace
 src/sanad_bringup/.env
+
+dual_laser_merger
+
+# -----------------------------------------------------------------------------
+# Environment & Private Keys
+# -----------------------------------------------------------------------------
+.env

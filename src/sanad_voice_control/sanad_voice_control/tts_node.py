@@ -14,9 +14,12 @@ class PiperTTSNode(Node):
             '/robot/speak',
             self.speak_callback,
             10)
-            
-        user_home = os.path.expanduser('~')
-        self.model_path = f"{user_home}/robot_ws/src/llm_control/voices/ar_JO-kareem-medium.onnx"
+        try:
+            from ament_index_python.packages import get_package_share_directory
+            share_dir = get_package_share_directory('sanad_voice_control')
+            self.model_path = os.path.join(share_dir, 'voices', 'ar_JO-kareem-medium.onnx')
+        except Exception:
+            self.model_path = 'voices/ar_JO-kareem-medium.onnx'
         self.temp_audio_file = "/tmp/robot_speech.wav"
         
         # This variable keeps track of the active audio player

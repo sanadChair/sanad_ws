@@ -4,7 +4,8 @@ amcl:
     base_frame_id: "base_footprint"
     global_frame_id: "map"
     odom_frame_id: "odom"
-    scan_topic: /scan_front_filtered
+    # scan_topic: scan_left_filtered
+    scan_topic: scan
     tf_broadcast: true
     transform_tolerance: 1.0
     save_pose_rate: 0.5
