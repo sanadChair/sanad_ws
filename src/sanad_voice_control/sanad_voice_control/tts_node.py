@@ -42,7 +42,13 @@ class PiperTTSNode(Node):
             )
             
             # Play the audio ASYNCHRONOUSLY using Popen. 
-            self.audio_process = subprocess.Popen(['aplay', '-q', self.temp_audio_file])
+            self.audio_process = subprocess.Popen(
+                                                    [
+                                                        "aplay",
+                                                        "-D", "plughw:1,0"
+                                                    ],
+                                                    stdin=subprocess.PIPE
+                                                )
             
         except subprocess.CalledProcessError as e:
             error_details = e.stderr.decode('utf-8') if e.stderr else "Unknown Piper Error"
@@ -79,10 +85,17 @@ class PiperTTSNode(Node):
                 # -r 24000: 24kHz sample rate
                 # -c 1: Mono channel
                 self.audio_process = subprocess.Popen(
-                    ['aplay', '-q', '-t', 'raw', '-f', 'S16_LE', '-r', '24000', '-c', '1'],
-                    stdin=subprocess.PIPE
-                )
-                
+                                [
+                                    "aplay",
+                                    "-q",
+                                    "-D", "plughw:1,0",
+                                    "-t", "raw",
+                                    "-f", "S16_LE",
+                                    "-r", "24000",
+                                    "-c", "1"
+                                ],
+                                stdin=subprocess.PIPE
+                            )
                 # 2. Use the streaming variant of the API
                 response_stream = client.models.generate_content_stream(
                     model="gemini-3.1-flash-tts-preview",
