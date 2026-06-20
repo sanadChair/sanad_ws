@@ -158,15 +158,15 @@ def generate_launch_description():
     return LaunchDescription(
         [
             use_sim_time_arg,
-            nav2_controller_server,
-            nav2_planner_server,
-            nav2_smoother_server,
-            nav2_bt_navigator,
-            nav2_behavior,
-            nav2_lifecycle_manager,
+            # nav2_controller_server,
+            # nav2_planner_server,
+            # nav2_smoother_server,
+            # nav2_bt_navigator,
+            # nav2_behavior,
+            # nav2_lifecycle_manager,
             # slam_mapping,
             laser_left_filter,
             laser_right_filter,
-            dual_laser_merger_node,
+            # dual_laser_merger_node,
         ]
     )

@@ -77,9 +77,9 @@ def generate_launch_description():
         {'port_name': '/dev/llidar'},
         {'serial_baudrate': 230400},
         {'laser_scan_dir': True},
-        {'enable_angle_crop_func': False},
-        {'angle_crop_min': 135.0},
-        {'angle_crop_max': 225.0},
+        {'enable_angle_crop_func': True},
+        {'angle_crop_min': 160.0},
+        {'angle_crop_max': 270.0},
         {'range_min': 0.02},
         {'range_max': 12.0}
             ]
@@ -169,14 +169,14 @@ def generate_launch_description():
         [
             use_slam_arg,
             hardware_interface,
-            rlidar_node,
-            # llidar_node,
+            # rlidar_node,
+            llidar_node,
             controller,
             joystick,
             # imu_driver_node,
             # localization,
             # slam,
-            # navigation,
+            navigation,
             # rviz_slam,
             rviz_nav,
         ]
