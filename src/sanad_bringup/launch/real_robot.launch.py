@@ -45,45 +45,45 @@ def generate_launch_description():
     #     )
     # )
     rlidar_node = Node(
-      package='ldlidar_ros2',
-      executable='ldlidar_ros2_node',
-      name='rlidar_publisher',
-      output='screen',
-      parameters=[
-        {'product_name': 'LDLiDAR_LD06'},
-        {'laser_scan_topic_name': 'scan_right'},
-        {'point_cloud_2d_topic_name': 'pointcloud2d'},
-        {'frame_id': 'laser_right_link'},
-        {'port_name': '/dev/rlidar'},
-        {'serial_baudrate': 230400},
-        {'laser_scan_dir': True},
-        {'enable_angle_crop_func': False},
-        {'angle_crop_min': 135.0},  
-        {'angle_crop_max': 225.0},  
-        {'range_min': 0.02},
-        {'range_max': 12.0} 
-            ]
-        )
+        package="ldlidar_ros2",
+        executable="ldlidar_ros2_node",
+        name="rlidar_publisher",
+        output="screen",
+        parameters=[
+            {"product_name": "LDLiDAR_LD06"},
+            {"laser_scan_topic_name": "scan_right"},
+            {"point_cloud_2d_topic_name": "pointcloud2d"},
+            {"frame_id": "laser_right_link"},
+            {"port_name": "/dev/ttyUSB1"},
+            {"serial_baudrate": 230400},
+            {"laser_scan_dir": True},
+            {"enable_angle_crop_func": False},
+            {"angle_crop_min": 135.0},
+            {"angle_crop_max": 225.0},
+            {"range_min": 0.02},
+            {"range_max": 12.0},
+        ],
+    )
     llidar_node = Node(
-      package='ldlidar_ros2',
-      executable='ldlidar_ros2_node',
-      name='llidar_publisher',
-      output='screen',
-      parameters=[
-        {'product_name': 'LDLiDAR_LD06'},
-        {'laser_scan_topic_name': 'scan_left'},
-        {'point_cloud_2d_topic_name': 'pointcloud2d'},
-        {'frame_id': 'laser_left_link'},
-        {'port_name': '/dev/llidar'},
-        {'serial_baudrate': 230400},
-        {'laser_scan_dir': True},
-        {'enable_angle_crop_func': True},
-        {'angle_crop_min': 160.0},
-        {'angle_crop_max': 270.0},
-        {'range_min': 0.02},
-        {'range_max': 12.0}
-            ]
-        )
+        package="ldlidar_ros2",
+        executable="ldlidar_ros2_node",
+        name="llidar_publisher",
+        output="screen",
+        parameters=[
+            {"product_name": "LDLiDAR_LD06"},
+            {"laser_scan_topic_name": "scan_left"},
+            {"point_cloud_2d_topic_name": "pointcloud2d"},
+            {"frame_id": "laser_left_link"},
+            {"port_name": "/dev/ttyUSB2"},
+            {"serial_baudrate": 230400},
+            {"laser_scan_dir": True},
+            {"enable_angle_crop_func": True},
+            {"angle_crop_min": 160.0},
+            {"angle_crop_max": 270.0},
+            {"range_min": 0.02},
+            {"range_max": 12.0},
+        ],
+    )
 
     controller = IncludeLaunchDescription(
         os.path.join(
@@ -169,7 +169,7 @@ def generate_launch_description():
         [
             use_slam_arg,
             hardware_interface,
-            # rlidar_node,
+            rlidar_node,
             llidar_node,
             controller,
             joystick,
@@ -178,6 +178,6 @@ def generate_launch_description():
             # slam,
             navigation,
             # rviz_slam,
-            rviz_nav,
+            # rviz_nav,
         ]
     )
