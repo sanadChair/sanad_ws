@@ -27,23 +27,7 @@ def generate_launch_description():
         "ldlidar.yaml",
     )
 
-    # laser_driver = Node(
-    #     package="ldlidar",
-    #     executable="ldlidar",
-    #     name="ldlidar",
-    #     output="screen",
-    #     parameters=[laser_params_file],
-    # )
 
-    # ldlidar_node = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource(
-    #         os.path.join(
-    #             get_package_share_directory("ldlidar_ros2"),
-    #             "launch",
-    #             "ld06.launch.py",
-    #         )
-    #     )
-    # )
     rlidar_node = Node(
         package="ldlidar_ros2",
         executable="ldlidar_ros2_node",
@@ -54,7 +38,7 @@ def generate_launch_description():
             {"laser_scan_topic_name": "scan_right"},
             {"point_cloud_2d_topic_name": "pointcloud2d"},
             {"frame_id": "laser_right_link"},
-            {"port_name": "/dev/ttyUSB1"},
+            {"port_name": "/dev/ttyUSB2"},
             {"serial_baudrate": 230400},
             {"laser_scan_dir": True},
             {"enable_angle_crop_func": False},
@@ -74,7 +58,7 @@ def generate_launch_description():
             {"laser_scan_topic_name": "scan_left"},
             {"point_cloud_2d_topic_name": "pointcloud2d"},
             {"frame_id": "laser_left_link"},
-            {"port_name": "/dev/ttyUSB2"},
+            {"port_name": "/dev/ttyUSB1"},
             {"serial_baudrate": 230400},
             {"laser_scan_dir": True},
             {"enable_angle_crop_func": True},

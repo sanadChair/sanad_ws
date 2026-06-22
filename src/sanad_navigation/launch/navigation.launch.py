@@ -1,7 +1,7 @@
 import os
 
 from ament_index_python.packages import get_package_share_directory
-
+import launch_ros.actions
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -155,6 +155,8 @@ def generate_launch_description():
             {"use_sim_time": use_sim_time},
         ],
     )
+
+
     return LaunchDescription(
         [
             use_sim_time_arg,
@@ -167,6 +169,6 @@ def generate_launch_description():
             # slam_mapping,
             laser_left_filter,
             laser_right_filter,
-            # dual_laser_merger_node,
+            dual_laser_merger_node,
         ]
     )
