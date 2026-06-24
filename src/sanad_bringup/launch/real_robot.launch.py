@@ -90,7 +90,6 @@ def generate_launch_description():
         launch_arguments={"use_sim_time": "False"}.items(),
     )
 
-    imu_driver_node = Node(package="sanad_firmware", executable="mpu6050_driver.py")
 
     localization = IncludeLaunchDescription(
         os.path.join(
@@ -157,9 +156,8 @@ def generate_launch_description():
             llidar_node,
             controller,
             joystick,
-            # imu_driver_node,
-            # localization,
-            # slam,
+            localization,
+            slam,
             navigation,
             # rviz_slam,
             # rviz_nav,

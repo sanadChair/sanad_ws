@@ -1,6 +1,6 @@
 dual_laser_merger:
   ros__parameters:
-    laser_1_topic: /scan_left
+    laser_1_topic: /scan_left_filtered
     laser_2_topic: /scan_right_filtered
     merged_scan_topic: /scan
     target_frame: base_link
