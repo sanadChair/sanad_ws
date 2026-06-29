@@ -22,6 +22,12 @@ setup(
             ],
         ),
         ("share/" + package_name + "/launch", ["launch/commander.launch.py"]),
+        (
+            "share/" + package_name + "/models",
+            [
+                "models/sanad.onnx",
+            ],
+        ),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -42,6 +48,7 @@ setup(
             "telegram_node = sanad_voice_control.telegram_node:main",
             "console_input_node = sanad_voice_control.console_input_node:main",
             "llm_node = sanad_voice_control.llm_node:main",
+            "wakeup_node = sanad_voice_control.wakeup_node:main",
         ],
     },
 )

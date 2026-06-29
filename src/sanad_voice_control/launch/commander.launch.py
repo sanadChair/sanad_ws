@@ -47,7 +47,17 @@ def generate_launch_description():
                 name="telegram_node",
                 output="screen",
             ),
-            # Whisper / STT / PTT Recording Node
+            # Wakeup Word / openWakeWord Node
+            Node(
+                package="sanad_voice_control",
+                executable="wakeup_node",
+                name="wakeup_node",
+                output="screen",
+                parameters=[{
+                    'use_cloud': LaunchConfiguration('use_cloud')
+                }]
+            ),
+            # Whisper / STT Node
             Node(
                 package="sanad_voice_control",
                 executable="whisper_node",
