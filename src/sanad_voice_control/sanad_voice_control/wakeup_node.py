@@ -73,8 +73,8 @@ class WakeupNode(Node):
 
         FORMAT = pyaudio.paInt16
         CHANNELS = 1
-        RATE = 16000
-        CHUNK = 1280
+        RATE = 44100
+        CHUNK = int(44100 * 0.08)  
         audio = pyaudio.PyAudio()
 
         self.get_logger().info(f"✅ openWakeWord Active! Model loaded from: {self.oww_model_path}. Say 'Sanad' to wake me up.")
@@ -105,10 +105,14 @@ class WakeupNode(Node):
                         mic_stream.read(CHUNK, exception_on_overflow=False),
                         dtype=np.int16,
                     )
-                    prediction = oww_model.predict(pcm)
+                    from scipy.signal import resample_poly
+
+                    pcm16 = resample_poly(pcm, 16000, 44100).astype(np.int16)
+
+                    prediction = oww_model.predict(pcm16)
 
                     for model_name, score in prediction.items():
-                        if score > 0.6:
+                        if score > 0.3:
                             self.get_logger().info(f"🔊 WAKE WORD DETECTED! (Confidence: {score:.2f})")
                             print(f"\n WAKE WORD DETECTED! (Confidence: {score:.2f})")
                             triggered = True
