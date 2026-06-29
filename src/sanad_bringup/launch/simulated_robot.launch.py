@@ -21,9 +21,15 @@ def generate_launch_description():
         default_value="small_house",
         description="Name of world to load (without .world extension)",
     )
-    chosen_world = PythonExpression([
-        "'small_house_w_human' if '", use_human, "' == 'true' else '", world_config, "'"
-    ])
+    chosen_world = PythonExpression(
+        [
+            "'small_house_w_human' if '",
+            use_human,
+            "' == 'true' else '",
+            world_config,
+            "'",
+        ]
+    )
 
     gazebo = IncludeLaunchDescription(
         os.path.join(
@@ -85,7 +91,7 @@ def generate_launch_description():
         os.path.join(
             get_package_share_directory("sanad_navigation"),
             "launch",
-            "navigation.launch.py",
+            "navigation_follow_person.launch.py",
         ),
         condition=IfCondition(use_human),
     )
@@ -133,7 +139,7 @@ def generate_launch_description():
             localization,
             slam,
             navigation,
-            navigation_follow_person,
+            # navigation_follow_person,
             room_manager,
             rviz,
         ]
