@@ -3,7 +3,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 import launch_ros.actions
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 
@@ -137,13 +137,6 @@ def generate_launch_description():
         ],
     )
 
-    slam_mapping = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("sanad_mapping"),
-            "launch",
-            "slam.launch.py",
-        ),
-    )
 
     dual_laser_merger_node = Node(
         package="dual_laser_merger",
@@ -166,7 +159,6 @@ def generate_launch_description():
             nav2_bt_navigator,
             nav2_behavior,
             nav2_lifecycle_manager,
-            slam_mapping,
             laser_left_filter,
             laser_right_filter,
             dual_laser_merger_node,
