@@ -108,9 +108,10 @@ class WakeupNode(Node):
                     prediction = oww_model.predict(pcm)
 
                     for model_name, score in prediction.items():
-                        if score > 0.6:
-                            self.get_logger().info(f"🔊 WAKE WORD DETECTED! (Confidence: {score:.2f})")
-                            print(f"\n WAKE WORD DETECTED! (Confidence: {score:.2f})")
+                        score_val = float(score.item() if hasattr(score, "item") else score)
+                        if score_val > 0.6:
+                            self.get_logger().info(f"🔊 WAKE WORD DETECTED! (Confidence: {score_val:.2f})")
+                            print(f"\n WAKE WORD DETECTED! (Confidence: {score_val:.2f})")
                             triggered = True
                             break
 
