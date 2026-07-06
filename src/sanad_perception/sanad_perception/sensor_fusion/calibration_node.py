@@ -71,33 +71,37 @@ class CalibrationNode(Node):
         super().__init__("calibration_node")
 
         # ── Parameters ───────────────────────────────────────────────────────
-        self.declare_parameter("rgbd_topic",              "/realsense/points")
-        self.declare_parameter("lidar_topic",             "/scan")
-        self.declare_parameter("target_frame",            "base_footprint")
-        self.declare_parameter("calibration_attempts",    10)
-        self.declare_parameter("frontal_half_angle_deg",  25.0)
-        self.declare_parameter("min_height",              0.1)
-        self.declare_parameter("max_height",              2.0)
+        self.declare_parameter("rgbd_topic", "/camera/depth/points")
+        self.declare_parameter("lidar_topic", "/scan")
+        self.declare_parameter("target_frame", "base_footprint")
+        self.declare_parameter("calibration_attempts", 10)
+        self.declare_parameter("frontal_half_angle_deg", 25.0)
+        self.declare_parameter("min_height", 0.1)
+        self.declare_parameter("max_height", 2.0)
 
-        rgbd_topic      = self.get_parameter("rgbd_topic").value
-        lidar_topic     = self.get_parameter("lidar_topic").value
-        self.target_frame   = self.get_parameter("target_frame").value
-        self.cal_attempts   = self.get_parameter("calibration_attempts").value
-        self.frontal_angle  = self.get_parameter("frontal_half_angle_deg").value
-        self.min_height     = self.get_parameter("min_height").value
-        self.max_height     = self.get_parameter("max_height").value
+        rgbd_topic = self.get_parameter("rgbd_topic").value
+        lidar_topic = self.get_parameter("lidar_topic").value
+        self.target_frame = self.get_parameter("target_frame").value
+        self.cal_attempts = self.get_parameter("calibration_attempts").value
+        self.frontal_angle = self.get_parameter("frontal_half_angle_deg").value
+        self.min_height = self.get_parameter("min_height").value
+        self.max_height = self.get_parameter("max_height").value
 
         # ── File persistence ─────────────────────────────────────────────────
-        self.declare_parameter("calibration_file",  "")
+        self.declare_parameter("calibration_file", "")
         self.declare_parameter("force_recalibrate", False)
 
         cal_file_param = self.get_parameter("calibration_file").value
         self.calibration_file = (
-            Path(cal_file_param) if cal_file_param
-            else Path(
-                    get_package_share_directory("sanad_perception")
-                ).parents[3] / "src" / "sanad_perception" / "sanad_perception" / "sensor_fusion" / "calibration.json"
-            )
+            Path(cal_file_param)
+            if cal_file_param
+            else Path(get_package_share_directory("sanad_perception")).parents[3]
+            / "src"
+            / "sanad_perception"
+            / "sanad_perception"
+            / "sensor_fusion"
+            / "calibration.json"
+        )
 
         # ── State ─────────────────────────────────────────────────────────────
         self._cal_samples: list[float] = []
@@ -105,7 +109,7 @@ class CalibrationNode(Node):
         self.is_calibrated: bool = False
 
         # ── TF2 ──────────────────────────────────────────────────────────────
-        self.tf_buffer   = Buffer()
+        self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # ── QoS ──────────────────────────────────────────────────────────────
@@ -130,8 +134,10 @@ class CalibrationNode(Node):
         )
 
         # ── Publishers ───────────────────────────────────────────────────────
-        self.bias_pub   = self.create_publisher(Float32, "/depth_bias",         latched_qos)
-        self.status_pub = self.create_publisher(String,  "/calibration_status", latched_qos)
+        self.bias_pub = self.create_publisher(Float32, "/depth_bias", latched_qos)
+        self.status_pub = self.create_publisher(
+            String, "/calibration_status", latched_qos
+        )
 
         # Try to restore previous calibration before touching the sensors
         if not self.get_parameter("force_recalibrate").value:
@@ -146,8 +152,10 @@ class CalibrationNode(Node):
                 )
 
         # ── Subscribers + synchronizer ────────────────────────────────────────
-        self.rgbd_sub  = Subscriber(self, PointCloud2, rgbd_topic,  qos_profile=camera_qos)
-        self.lidar_sub = Subscriber(self, LaserScan,   lidar_topic, qos_profile=lidar_qos)
+        self.rgbd_sub = Subscriber(
+            self, PointCloud2, rgbd_topic, qos_profile=camera_qos
+        )
+        self.lidar_sub = Subscriber(self, LaserScan, lidar_topic, qos_profile=lidar_qos)
 
         self.sync = ApproximateTimeSynchronizer(
             [self.rgbd_sub, self.lidar_sub],
@@ -180,9 +188,7 @@ class CalibrationNode(Node):
                 raise ValueError("non-finite value")
             return val
         except Exception as exc:
-            self.get_logger().warn(
-                f"Failed to load {self.calibration_file}: {exc}"
-            )
+            self.get_logger().warn(f"Failed to load {self.calibration_file}: {exc}")
             return None
 
     def _save_calibration(self, delta_z: float, std: float) -> None:
@@ -199,9 +205,7 @@ class CalibrationNode(Node):
             with tmp.open("w") as fh:
                 json.dump(payload, fh, indent=2)
             tmp.replace(self.calibration_file)
-            self.get_logger().info(
-                f"Calibration saved to {self.calibration_file}"
-            )
+            self.get_logger().info(f"Calibration saved to {self.calibration_file}")
         except Exception as exc:
             self.get_logger().error(f"Failed to save calibration: {exc}")
 
@@ -210,9 +214,7 @@ class CalibrationNode(Node):
         bias_msg = Float32()
         bias_msg.data = self.delta_z
         self.bias_pub.publish(bias_msg)
-        self._publish_status(
-            f"RESTORED | Δz = {self.delta_z:+.4f} m (from file)"
-        )
+        self._publish_status(f"RESTORED | Δz = {self.delta_z:+.4f} m (from file)")
 
     # ── TF helper ────────────────────────────────────────────────────────────
 
@@ -230,7 +232,7 @@ class CalibrationNode(Node):
             tf = self.tf_buffer.lookup_transform(
                 self.target_frame,
                 frame_id,
-                stamp,
+                rclpy.time.Time(),
                 timeout=rclpy.duration.Duration(seconds=0.1),
             )
         except Exception as exc:
@@ -251,9 +253,7 @@ class CalibrationNode(Node):
 
     # ── Calibration logic ─────────────────────────────────────────────────────
 
-    def _sync_callback(
-        self, rgbd_msg: PointCloud2, lidar_msg: LaserScan
-    ) -> None:
+    def _sync_callback(self, rgbd_msg: PointCloud2, lidar_msg: LaserScan) -> None:
         """Synchronized RGBD + LiDAR callback — collects calibration samples."""
         if self.is_calibrated:
             return  # nothing left to do
@@ -295,7 +295,7 @@ class CalibrationNode(Node):
             return
 
         self._cal_samples.append(delta)
-        n   = len(self._cal_samples)
+        n = len(self._cal_samples)
         rem = self.cal_attempts - n
         msg = (
             f"Sample {n}/{self.cal_attempts}: Δz = {delta:+.4f} m "
@@ -310,24 +310,21 @@ class CalibrationNode(Node):
 
     def _finalise_calibration(self) -> None:
         """Average samples, publish Δz, mark node as done."""
-        self.delta_z      = float(np.mean(self._cal_samples))
+        self.delta_z = float(np.mean(self._cal_samples))
         self.is_calibrated = True
         std = float(np.std(self._cal_samples))
 
-        self._save_calibration(self.delta_z, std)   # <-- NEW
+        self._save_calibration(self.delta_z, std)  # <-- NEW
 
         self.get_logger().info(
-            f"✅ Calibration complete | "
-            f"Δz = {self.delta_z:+.4f} m ± {std:.4f} m"
+            f"✅ Calibration complete | " f"Δz = {self.delta_z:+.4f} m ± {std:.4f} m"
         )
 
         bias_msg = Float32()
         bias_msg.data = self.delta_z
         self.bias_pub.publish(bias_msg)
 
-        self._publish_status(
-            f"DONE | Δz = {self.delta_z:+.4f} m ± {std:.4f} m"
-        )
+        self._publish_status(f"DONE | Δz = {self.delta_z:+.4f} m ± {std:.4f} m")
 
     def _publish_status(self, text: str) -> None:
         msg = String()

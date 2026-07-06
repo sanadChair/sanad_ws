@@ -36,6 +36,7 @@ from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 
@@ -43,6 +44,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
 
     use_sim_time = LaunchConfiguration("use_sim_time")
+    is_sim = LaunchConfiguration("is_sim")
     lifecycle_nodes = [
         "controller_server",
         "planner_server",
@@ -60,12 +62,13 @@ def generate_launch_description():
     def bt(filename):
         return os.path.join(sanad_navigation_pkg, "behavior_tree", filename)
 
-    overrides = cfg("follow_person_overrides.yaml")   # the only new file
+    overrides = cfg("follow_person_overrides.yaml")  # the only new file
 
     # ── launch args ───────────────────────────────────────────────────────────
     use_sim_time_arg = DeclareLaunchArgument(
-        "use_sim_time", default_value="true"   # default false for real hardware
+        "use_sim_time", default_value="true"  # default false for real hardware
     )
+    is_sim_arg = DeclareLaunchArgument("is_sim", default_value="true")
 
     # ── nav2 nodes ────────────────────────────────────────────────────────────
     # Each node is identical to navigation.launch.py with two differences:
@@ -79,7 +82,7 @@ def generate_launch_description():
         parameters=[
             cfg("controller_server.yaml"),
             {"use_sim_time": use_sim_time},
-            overrides,                              # ← override: stateful, vel, angle
+            overrides,  # ← override: stateful, vel, angle
         ],
     )
 
@@ -91,7 +94,7 @@ def generate_launch_description():
         parameters=[
             cfg("planner_server.yaml"),
             {"use_sim_time": use_sim_time},
-            overrides,                              # ← override: tolerance
+            overrides,  # ← override: tolerance
         ],
     )
 
@@ -118,7 +121,11 @@ def generate_launch_description():
             # ← swap BT to the no-recovery follow person tree
             {"default_nav_to_pose_bt_xml": bt("follow_person_bt.xml")},
             # nav_through_poses keeps the original BT (not used during following)
-            {"default_nav_through_poses_bt_xml": bt("simple_navigation_w_replanning.xml")},
+            {
+                "default_nav_through_poses_bt_xml": bt(
+                    "simple_navigation_w_replanning.xml"
+                )
+            },
             overrides,
         ],
     )
@@ -148,26 +155,62 @@ def generate_launch_description():
     )
 
     # ── sensor nodes — identical to navigation.launch.py ─────────────────────
-    laser_left_filter = Node(
+    laser_left_filter_sim = Node(
         package="laser_filters",
         executable="scan_to_scan_filter_chain",
+        condition=IfCondition(is_sim),
         parameters=[
-            PathJoinSubstitution([sanad_navigation_pkg, "config", "laser_left_filter.yaml"])
+            PathJoinSubstitution(
+                [sanad_navigation_pkg, "config", "laser_left_filter_sim.yaml"]
+            )
         ],
         remappings=[
-            ("scan",          "/scan_left"),
+            ("scan", "/scan_left"),
             ("scan_filtered", "/scan_left_filtered"),
         ],
     )
 
-    laser_right_filter = Node(
+    laser_left_filter_real = Node(
         package="laser_filters",
         executable="scan_to_scan_filter_chain",
+        condition=UnlessCondition(is_sim),
         parameters=[
-            PathJoinSubstitution([sanad_navigation_pkg, "config", "laser_right_filter.yaml"])
+            PathJoinSubstitution(
+                [sanad_navigation_pkg, "config", "laser_left_filter.yaml"]
+            )
         ],
         remappings=[
-            ("scan",          "/scan_right"),
+            ("scan", "/scan_left"),
+            ("scan_filtered", "/scan_left_filtered"),
+        ],
+    )
+
+    laser_right_filter_sim = Node(
+        package="laser_filters",
+        executable="scan_to_scan_filter_chain",
+        condition=IfCondition(is_sim),
+        parameters=[
+            PathJoinSubstitution(
+                [sanad_navigation_pkg, "config", "laser_right_filter_sim.yaml"]
+            )
+        ],
+        remappings=[
+            ("scan", "/scan_right"),
+            ("scan_filtered", "/scan_right_filtered"),
+        ],
+    )
+
+    laser_right_filter_real = Node(
+        package="laser_filters",
+        executable="scan_to_scan_filter_chain",
+        condition=UnlessCondition(is_sim),
+        parameters=[
+            PathJoinSubstitution(
+                [sanad_navigation_pkg, "config", "laser_right_filter.yaml"]
+            )
+        ],
+        remappings=[
+            ("scan", "/scan_right"),
             ("scan_filtered", "/scan_right_filtered"),
         ],
     )
@@ -183,15 +226,20 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription([
-        use_sim_time_arg,
-        nav2_controller_server,
-        nav2_planner_server,
-        nav2_smoother_server,
-        nav2_bt_navigator,
-        nav2_behavior,
-        nav2_lifecycle_manager,
-        laser_left_filter,
-        laser_right_filter,
-        dual_laser_merger_node,
-    ])
+    return LaunchDescription(
+        [
+            use_sim_time_arg,
+            is_sim_arg,
+            nav2_controller_server,
+            nav2_planner_server,
+            nav2_smoother_server,
+            nav2_bt_navigator,
+            nav2_behavior,
+            nav2_lifecycle_manager,
+            laser_left_filter_sim,
+            laser_left_filter_real,
+            laser_right_filter_sim,
+            laser_right_filter_real,
+            dual_laser_merger_node,
+        ]
+    )

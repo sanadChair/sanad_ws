@@ -7,6 +7,8 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
+# from launch.remappings import Remap
+
 
 def generate_launch_description():
     use_slam = LaunchConfiguration("use_slam")
@@ -26,7 +28,6 @@ def generate_launch_description():
         "config",
         "ldlidar.yaml",
     )
-
 
     rlidar_node = Node(
         package="ldlidar_ros2",
@@ -68,7 +69,36 @@ def generate_launch_description():
             {"range_max": 12.0},
         ],
     )
-
+    astra_camera = Node(
+        package="astra_camera",
+        executable="astra_camera_node",
+        name="camera",
+        output="screen",
+        namespace="camera",
+        parameters=[
+            {
+                "camera_name": "camera",
+                "enable_point_cloud": True,
+                "enable_colored_point_cloud": False,
+                "color_width": 640,
+                "color_height": 480,
+                "color_fps": 30,
+                "depth_width": 640,
+                "depth_height": 480,
+                "depth_fps": 30,
+                "publish_tf": True,
+                "depth_registration": False,
+                "vendor_id": "0x2bc5",
+                "enable_color": True,
+                "enable_depth": True,
+                "enable_ir": True,
+            }
+        ],
+        remappings=[
+            ("camera/depth/color/points", "camera/depth_registered/points"),
+        ],
+        # condition=IfCondition(use_camera),
+    )
     controller = IncludeLaunchDescription(
         os.path.join(
             get_package_share_directory("sanad_controller"),
@@ -89,7 +119,6 @@ def generate_launch_description():
         ),
         launch_arguments={"use_sim_time": "False"}.items(),
     )
-
 
     localization = IncludeLaunchDescription(
         os.path.join(
@@ -159,6 +188,7 @@ def generate_launch_description():
             localization,
             slam,
             navigation,
+            astra_camera,
             # rviz_slam,
             # rviz_nav,
         ]

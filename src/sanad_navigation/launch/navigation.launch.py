@@ -4,6 +4,7 @@ from ament_index_python.packages import get_package_share_directory
 import launch_ros.actions
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 
@@ -11,6 +12,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
 
     use_sim_time = LaunchConfiguration("use_sim_time")
+    is_sim = LaunchConfiguration("is_sim")
     lifecycle_nodes = [
         "controller_server",
         "planner_server",
@@ -21,6 +23,7 @@ def generate_launch_description():
     sanad_navigation_pkg = get_package_share_directory("sanad_navigation")
 
     use_sim_time_arg = DeclareLaunchArgument("use_sim_time", default_value="true")
+    is_sim_arg = DeclareLaunchArgument("is_sim", default_value="true")
 
     nav2_controller_server = Node(
         package="nav2_controller",
@@ -101,9 +104,29 @@ def generate_launch_description():
             {"autostart": True},
         ],
     )
-    laser_left_filter = Node(
+    laser_left_filter_sim = Node(
         package="laser_filters",
         executable="scan_to_scan_filter_chain",
+        condition=IfCondition(is_sim),
+        parameters=[
+            PathJoinSubstitution(
+                [
+                    get_package_share_directory("sanad_navigation"),
+                    "config",
+                    "laser_left_filter_sim.yaml",
+                ]
+            )
+        ],
+        remappings=[
+            ("scan", "/scan_left"),
+            ("scan_filtered", "/scan_left_filtered"),
+        ],
+    )
+
+    laser_left_filter_real = Node(
+        package="laser_filters",
+        executable="scan_to_scan_filter_chain",
+        condition=UnlessCondition(is_sim),
         parameters=[
             PathJoinSubstitution(
                 [
@@ -119,9 +142,29 @@ def generate_launch_description():
         ],
     )
 
-    laser_right_filter = Node(
+    laser_right_filter_sim = Node(
         package="laser_filters",
         executable="scan_to_scan_filter_chain",
+        condition=IfCondition(is_sim),
+        parameters=[
+            PathJoinSubstitution(
+                [
+                    get_package_share_directory("sanad_navigation"),
+                    "config",
+                    "laser_right_filter_sim.yaml",
+                ]
+            )
+        ],
+        remappings=[
+            ("scan", "/scan_right"),  # input
+            ("scan_filtered", "/scan_right_filtered"),  # output
+        ],
+    )
+
+    laser_right_filter_real = Node(
+        package="laser_filters",
+        executable="scan_to_scan_filter_chain",
+        condition=UnlessCondition(is_sim),
         parameters=[
             PathJoinSubstitution(
                 [
@@ -137,7 +180,6 @@ def generate_launch_description():
         ],
     )
 
-
     dual_laser_merger_node = Node(
         package="dual_laser_merger",
         executable="dual_laser_merger_node",  # may be "merger_node" depending on build
@@ -149,18 +191,20 @@ def generate_launch_description():
         ],
     )
 
-
     return LaunchDescription(
         [
             use_sim_time_arg,
+            is_sim_arg,
             nav2_controller_server,
             nav2_planner_server,
             nav2_smoother_server,
             nav2_bt_navigator,
             nav2_behavior,
             nav2_lifecycle_manager,
-            laser_left_filter,
-            laser_right_filter,
+            laser_left_filter_sim,
+            laser_right_filter_sim,
+            laser_left_filter_real,
+            laser_right_filter_real,
             dual_laser_merger_node,
         ]
     )

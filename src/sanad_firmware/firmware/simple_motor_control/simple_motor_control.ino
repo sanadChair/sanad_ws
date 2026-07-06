@@ -1,12 +1,12 @@
 #include <PID_v1.h>
 
 // ─── BTS7960 MOTOR PINS ──────────────────────────────
-#define RPWM1  5
-#define LPWM1  6
+#define RPWM1  9
+#define LPWM1  10
 
 // ─── ENCODER PINS ────────────────────────────────────
-#define RIGHT_ENC_A  3
-#define RIGHT_ENC_B  7
+#define RIGHT_ENC_A  2
+#define RIGHT_ENC_B  4
 
 // ─── SAFETY ──────────────────────────────────────────
 #define MAX_SAFE_PWM     180    // ~70% power, safe for motors
@@ -24,7 +24,7 @@ double measured = 0.0;
 double output   = 0.0;
 
 
-double Kp = 0.1, Ki = 1.0, Kd = 0.00;
+double Kp = 0.42, Ki = 0.2, Kd = 0.02;
 
 PID motorPID(&measured, &output, &setpoint, Kp, Ki, Kd, DIRECT);
 
@@ -85,8 +85,8 @@ void loop() {
     // ── DEBUG OUTPUT ──
     Serial.print("SP:");     Serial.print(setpoint);
     Serial.print(" CV:");    Serial.print(measured);
-    Serial.print(" OUT:");   Serial.print(output);
-    Serial.print(" PWM:");   
+    // Serial.print(" OUT:");   Serial.print(output);
+    // Serial.print(" PWM:");   
     Serial.println(constrain((int)output, -MAX_SAFE_PWM, MAX_SAFE_PWM));
 
     last_millis = now;
