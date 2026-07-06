@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from sanad_interfaces.srv import SpeakToLLM
+from sanad_interfaces.srv import SpeakToLLM, CaptureAndDescribe
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+import cv2
 import json
 import requests
 import os
@@ -40,10 +43,27 @@ class LLMServiceNode(Node):
 
         # ROS 2 Parameters
         self.declare_parameter("use_cloud", True)
+        self.declare_parameter("camera_topic", "/realsense/image")
 
-        # ROS 2 Service Server
+        # Vision variables
+        self.latest_frame = None
+        self.bridge = CvBridge()
+
+        # Camera Subscription
+        camera_topic = self.get_parameter("camera_topic").get_parameter_value().string_value
+        self.create_subscription(
+            Image,
+            camera_topic,
+            self.image_callback,
+            10
+        )
+
+        # ROS 2 Service Servers
         self.srv = self.create_service(
             SpeakToLLM, "/robot/llm_query", self.handle_llm_query
+        )
+        self.capture_srv = self.create_service(
+            CaptureAndDescribe, "/robot/capture_and_describe", self.handle_capture_and_describe
         )
 
         # Initialize Google GenAI client for Vertex AI
@@ -57,7 +77,7 @@ class LLMServiceNode(Node):
             self.genai_client = None
 
         self.get_logger().info(
-            "✅ Stateless LLM Service Node is Ready! Serving /robot/llm_query"
+            "✅ Stateless LLM Service Node is Ready! Serving /robot/llm_query and /robot/capture_and_describe"
         )
 
     def handle_llm_query(self, request, response):
@@ -176,6 +196,72 @@ class LLMServiceNode(Node):
                 response.response = json.dumps(
                     {"response": "Error: Unable to reach local LLM backend."}
                 )
+
+        return response
+
+    def image_callback(self, msg):
+        self.latest_frame = msg
+
+    def handle_capture_and_describe(self, request, response):
+        self.get_logger().info("📸 Capture and Describe service called!")
+        
+        if self.latest_frame is None:
+            self.get_logger().error("❌ No image frame available from camera yet.")
+            response.response = "Sorry, I can't see anything because the camera is not active or hasn't sent any frames."
+            return response
+
+        try:
+            # Convert ROS Image to OpenCV BGR image
+            cv_img = self.bridge.imgmsg_to_cv2(self.latest_frame, desired_encoding="bgr8")
+            # Encode OpenCV image to JPEG bytes
+            success, encoded_img = cv2.imencode(".jpg", cv_img)
+            if not success:
+                raise Exception("Failed to encode image to JPEG")
+            
+            image_bytes = encoded_img.tobytes()
+        except Exception as e:
+            self.get_logger().error(f"❌ Failed to process camera frame: {e}")
+            response.response = "Sorry, I encountered an error while processing the camera image."
+            return response
+
+        if not self.genai_client:
+            self.get_logger().error("❌ Gemini client not initialized")
+            response.response = "Sorry, my visual brain client is not initialized."
+            return response
+
+        prompt = request.prompt
+        if not prompt:
+            prompt = "What do you see?"
+
+        self.get_logger().info(f"🌐 Routing vision query to Gemini Vertex AI with prompt: {prompt}")
+
+        try:
+            # Prepare image part
+            image_part = types.Part.from_bytes(
+                data=image_bytes,
+                mime_type="image/jpeg"
+            )
+            
+            # Setup system instruction depending on prompt language
+            system_instruction = "You are a helpful smart home robot. Describe what you see in the image clearly and concisely."
+            if "شايف" in prompt or "ماذا" in prompt or "شوف" in prompt:
+                system_instruction = "أنت مساعد ذكي بيتكلم باللهجة المصرية العامية فقط. صف ما تراه في الصورة بشكل طبيعي ومختصر وكأنك واحد من مصر."
+
+            config_opts = types.GenerateContentConfig(system_instruction=system_instruction)
+            
+            # Call Gemini
+            gemini_res = self.genai_client.models.generate_content(
+                model="gemini-2.5-flash",
+                config=config_opts,
+                contents=[image_part, prompt],
+            )
+            
+            raw_output = gemini_res.text
+            response.response = raw_output
+            self.get_logger().info(f"✅ Gemini response complete! Chars: {len(raw_output)}")
+        except Exception as e:
+            self.get_logger().error(f"❌ Error calling Gemini Vertex AI: {e}")
+            response.response = "Sorry, I had trouble talking to my vision backend."
 
         return response
 

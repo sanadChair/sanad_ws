@@ -2,7 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-from sanad_interfaces.srv import SpeakToLLM, NavigateToRoom
+from sanad_interfaces.srv import SpeakToLLM, NavigateToRoom, CaptureAndDescribe
 import json
 import re
 import os
@@ -29,6 +29,12 @@ class LLMCommander(Node):
         self.nav_client = self.create_client(
             NavigateToRoom,
             'rooms/navigate'
+        )
+
+        # Service Client for Vision Analysis
+        self.vision_client = self.create_client(
+            CaptureAndDescribe,
+            '/robot/capture_and_describe'
         )
         
         # Subscription to User Commands (Voice / Console)
@@ -325,6 +331,49 @@ class LLMCommander(Node):
                 else:
                     self.get_logger().error(f"❌ TELEGRAM Error: Contact '{contact_name}' not found.")
                     data['response'] = f"I cannot find a contact named {contact_name} in my database."
+
+            # --- VISION LOGIC ---
+            elif data.get('intent') == 'vision':
+                if self.vision_client.wait_for_service(timeout_sec=2.0):
+                    req = CaptureAndDescribe.Request()
+                    # Determine prompt based on active language
+                    prompts_map = {
+                        "ar": "ماذا ترى أمامك؟ صف بالتفصيل باللهجة المصرية العامية.",
+                        "en": "What do you see in front of you? Describe it in detail.",
+                        "fr": "Que vois-tu devant toi ? Décris-le en détail.",
+                        "de": "Was siehst du vor dir? Beschreibe es im Detail.",
+                        "es": "¿Qué ves delante de ti? Descríbelo en detail.",
+                        "it": "Cosa vedi davanti a te? Descrivilo in dettaglio."
+                    }
+                    req.prompt = prompts_map.get(self.current_lang, "What do you see in front of you? Describe it in detail.")
+                    
+                    self.get_logger().info(f"📸 Requesting vision analysis with prompt: {req.prompt}")
+                    future_vision = self.vision_client.call_async(req)
+                    
+                    def vision_done_callback(fut):
+                        try:
+                            res = fut.result()
+                            vision_desc = res.response
+                            self.get_logger().info(f"✅ Vision analysis complete: {vision_desc}")
+                            
+                            # Append to chat history so the assistant remembers what it saw
+                            self.chat_history.append({"role": "assistant", "content": vision_desc})
+                            
+                            # Speak the description
+                            tts_msg = String()
+                            tts_msg.data = vision_desc
+                            self.tts_pub.publish(tts_msg)
+                            self.get_logger().info(f"🗣️ Vision Response Published to TTS: {vision_desc}")
+                        except Exception as ex:
+                            self.get_logger().error(f"❌ Vision service call failed: {ex}")
+                            
+                    future_vision.add_done_callback(vision_done_callback)
+                else:
+                    self.get_logger().error("❌ Service /robot/capture_and_describe not available!")
+                    fallback_response = "Sorry, my camera service is not available."
+                    tts_msg = String()
+                    tts_msg.data = fallback_response
+                    self.tts_pub.publish(tts_msg)
 
             # --- NAVIGATION LOGIC ---
             if data.get('navigate_to'):
