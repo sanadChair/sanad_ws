@@ -48,8 +48,10 @@ void DijkstraPlanner::deactivate()
 
 nav_msgs::msg::Path DijkstraPlanner::createPlan(
   const geometry_msgs::msg::PoseStamped & start,
-  const geometry_msgs::msg::PoseStamped & goal)
+  const geometry_msgs::msg::PoseStamped & goal,
+  std::function<bool()> cancel_checker)
 {
+    (void)cancel_checker;
     std::vector<std::pair<int, int>> explore_directions = {
         {-1, 0}, {1, 0}, {0, -1}, {0, 1}
     };

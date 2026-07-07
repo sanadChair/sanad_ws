@@ -13,7 +13,7 @@ setup(
         ("share/" + package_name + "/config", ["config/rooms.yaml"]),
         ("share/" + package_name + "/launch", glob("launch/*.launch.py")),
     ],
-    install_requires=["setuptools"],
+    install_requires=["setuptools", "pyserial"],
     zip_safe=True,
     maintainer="zero",
     maintainer_email="mohmed.ayman11@gmail.com",
@@ -28,6 +28,7 @@ setup(
         "console_scripts": [
             "room_manager_node = sanad_room_manager.room_manager_node:main",
             "room_nav = sanad_room_manager.room_nav:main",
+            "ir_manager_node = sanad_room_manager.ir_manager_node:main",
         ],
     },
 )
