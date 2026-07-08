@@ -1,6 +1,6 @@
-kitchen:
-  id: 0863a38d-cf97-4716-a235-901da0ef1f00
-  name: kitchen
+living room:
+  id: 0863a38d-cf97-4716-a235-901da0ef1f11
+  name: living room
   coordinates:
     min_x: -2.2703407390979464
     max_x: 4.587341771875522
@@ -12,45 +12,10 @@ kitchen:
       y: 3.46634774259904
       theta: 0.0
   devices:
-  - id: lights-1
-    name: light device
+  - id: relay-ct2112rx1
+    name: Relay1
     control_type: binary
     state: 0
-    connected: false
-    created_at: '2026-05-29T21:46:03.000Z'
-    updated_at: '2026-05-29T21:46:03.000Z'
-  - id: lights-2
-    name: kitchen-lights
-    control_type: binary
-    state: 1
-    connected: false
-    created_at: '2026-05-29T21:49:19.000Z'
-    updated_at: '2026-05-29T21:49:19.000Z'
-  - id: lights-3
-    name: kitchen-lights
-    control_type: binary
-    state: 1
-    connected: false
-    created_at: '2026-05-29T21:54:32.000Z'
-    updated_at: '2026-05-29T21:55:18.000Z'
-sleep room:
-  id: 0863a38d-cf97-4716-a235-901da0ef1f10
-  name: sleep room
-  coordinates:
-    min_x: -2.2703407390979464
-    max_x: 4.587341771875522
-    min_y: 1.511058040918872
-    max_y: 5.421637444279205
-    theta: 0.0
-    pose:
-      x: 1.1585005163887878
-      y: 3.46634774259904
-      theta: 0.0
-  devices:
-  - id: relay-1
-    name: light device
-    control_type: binary
-    state: 0
-    connected: false
-    created_at: '2026-05-29T21:51:35.000Z'
-    updated_at: '2026-05-29T21:51:35.000Z'
+    connected: true
+    created_at: '2026-07-08T08:02:58.000Z'
+    updated_at: '2026-07-08T08:02:58.000Z'
