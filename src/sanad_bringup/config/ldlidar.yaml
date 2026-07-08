@@ -1,0 +1,11 @@
+ldlidar_node:
+  ros__parameters:
+    product_name: LDLiDAR_LD06 # or LD14
+    topic_name: scan
+    lidar_frame: laser_link
+
+    port_name: /dev/ttyUSB0
+    port_baudrate: 230400
+
+    laser_scan_dir: true
+    enable_angle_crop_func: false

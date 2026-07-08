@@ -63,4 +63,3 @@ sanad_controller:
         min_acceleration: -5.0 # rad/s^2
         has_jerk_limits: false
         max_jerk: 2.5 # rad/s^3
-

@@ -4,13 +4,15 @@ from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
 
-class KalmanFilter(Node):
-    def __init__(self):
-        super().__init__("kalman_filer")
-        self.odom_sub_ = self.create_subscription(Odometry, 'sanad_controller/odom_noisy', self.odomCallback, 10)
-        self.imu_sub_ = self.create_subscription(Imu, 'imu/out', self.imuCallback, 10)
-        self.odom_pub_ = self.create_publisher(Odometry, 'sanad_controller/odom_kalman', 10)
 
+class KalmanFilter(Node):
+
+    def __init__(self):
+        super().__init__("kalman_filter")
+        self.odom_sub_ = self.create_subscription(Odometry, "sanad_controller/odom_noisy", self.odomCallback, 10)
+        self.imu_sub_ = self.create_subscription(Imu, "sanad_controller/imu/out", self.imuCallback, 10)
+        self.odom_pub_ = self.create_publisher(Odometry, "sanad_controller/odom_kalman", 10)
+        
         # Initially the robot has no idea about how fast is going
         self.mean_ = 0.0
         self.variance_ = 1000.0
@@ -30,11 +32,7 @@ class KalmanFilter(Node):
         self.kalman_odom_ = Odometry()
 
 
-    def imuCallback(self, imu: Imu):
-        # Store the measurement update
-        self.imu_angular_z_ = imu.angular_velocity.z
-
-    def odomCallback(self, odom: Odometry):
+    def odomCallback(self, odom):
         self.kalman_odom_ = odom
 
         if self.is_first_odom_:
@@ -56,12 +54,18 @@ class KalmanFilter(Node):
         self.odom_pub_.publish(self.kalman_odom_)
 
 
+    def imuCallback(self, imu):
+        # Store the measurement update
+        self.imu_angular_z_ = imu.angular_velocity.z
+
+
     def measurementUpdate(self):
         self.mean_ = (self.measurement_variance_ * self.mean_ + self.variance_ * self.imu_angular_z_) \
                    / (self.variance_ + self.measurement_variance_)
                      
         self.variance_ = (self.variance_ * self.measurement_variance_) \
                        / (self.variance_ + self.measurement_variance_)
+
 
     def statePrediction(self):
         self.mean_ = self.mean_ + self.motion_
