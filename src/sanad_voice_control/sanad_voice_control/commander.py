@@ -7,6 +7,8 @@ from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
 import tf2_ros
+from sanad_interfaces.srv import ControlDevice
+from sanad_voice_control.home_context import load_home_context, resolve_device
 import json
 import re
 import os
@@ -19,7 +21,6 @@ class LLMCommander(Node):
         
         # Publishers
         self.nav_pub = self.create_publisher(String, '/robot/nav_command', 10)
-        self.home_pub = self.create_publisher(String, '/robot/smarthome_command', 10)
         self.tts_pub = self.create_publisher(String, '/robot/speak', 10)
         self.telegram_send_pub = self.create_publisher(String, '/robot/telegram/send', 10)
         self.telegram_clear_pub = self.create_publisher(String, '/robot/telegram/clear', 10)
@@ -58,6 +59,11 @@ class LLMCommander(Node):
         # TF Listener for robot localization
         self._tf_buffer = tf2_ros.Buffer(cache_time=rclpy.duration.Duration(seconds=10.0))
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
+        # Service Client for real Smart Home device control
+        self.control_device_client = self.create_client(
+            ControlDevice,
+            '/smarthome/controlDevice'
+        )
         
         # Subscription to User Commands (Voice / Console)
         self.voice_sub = self.create_subscription(
@@ -68,7 +74,6 @@ class LLMCommander(Node):
         )
         
         # State variables relocated from llm_node
-        self.home_state = {"ac": "off", "heater": "off", "light": "off", "tv": "off"}
         self.chat_history = []
         self.current_lang = "ar"
         self.language_map = {
@@ -111,9 +116,6 @@ class LLMCommander(Node):
         except FileNotFoundError:
             self.telegram_contacts = {}
 
-        # Load dynamic room coordinates
-        self.load_rooms_config()
-
         self.get_logger().info("✅ LLM Brain Orchestrator Node Ready! Service client connected.")
 
     def _robot_position(self):
@@ -141,6 +143,16 @@ class LLMCommander(Node):
         return os.path.join('config', filename)
 
     def _resolve_rooms_yaml_path(self):
+        env_yaml_path = os.environ.get('SANAD_ROOMS_YAML_PATH')
+        if env_yaml_path and os.path.isfile(env_yaml_path):
+            return os.path.abspath(env_yaml_path)
+
+        workspace_yaml_path = os.path.abspath(
+            os.path.join(os.getcwd(), 'src', 'sanad_room_manager', 'config', 'rooms.yaml')
+        )
+        if os.path.isfile(workspace_yaml_path):
+            return workspace_yaml_path
+
         try:
             from ament_index_python.packages import get_package_share_directory
             share_dir = get_package_share_directory('sanad_room_manager')
@@ -152,48 +164,115 @@ class LLMCommander(Node):
 
         return None
 
-    def load_rooms_config(self):
-        # Initialize default fallback coordinates if not already present
-        if not hasattr(self, 'room_coordinates') or not self.room_coordinates:
-            self.room_coordinates = {
-                "office":  {"x": -5.584028244018555, "y": -3.163759469985962, "z": -0.001434326171875},
-                "bedroom": {"x": -5.7033257484436035, "y": -0.234835684299469, "z": -0.001434326171875},
-                "gym":     {"x": -5.7033257484436035, "y": -0.234835684299469, "z": -0.001434326171875},
-                "kitchen": {"x": 6.558255195617676,  "y": -2.977426767349243, "z": 0.002532958984375},
-                "living":  {"x": 0.8284147381782532, "y": -0.6738091707229614, "z": 0.002471923828125}
+    def _load_home_context(self):
+        try:
+            return load_home_context(self._resolve_rooms_yaml_path())
+        except Exception as e:
+            self.get_logger().error(f"Error loading room manager YAML: {e}")
+            return {
+                "rooms": [],
+                "devices": [],
+                "rooms_prompt": "[]",
+                "devices_prompt": "[]",
             }
-            
-        rooms_yaml = self._resolve_rooms_yaml_path()
-        if rooms_yaml and os.path.exists(rooms_yaml):
+
+    def _find_room(self, rooms, target_room):
+        target = self._lookup_key(target_room)
+        for room in rooms:
+            if target in {
+                self._lookup_key(room["key"]),
+                self._lookup_key(room["id"]),
+                self._lookup_key(room["name"]),
+            }:
+                return room
+        return None
+
+    def _lookup_key(self, value):
+        return re.sub(r"[^a-z0-9]+", "", str(value or "").casefold())
+
+    def _publish_tts(self, text):
+        if not text:
+            return
+        tts_msg = String()
+        tts_msg.data = text
+        self.tts_pub.publish(tts_msg)
+        self.get_logger().info(f"🗣️ TTS Response Published: {text}")
+
+    def _set_language(self, language_code):
+        if language_code not in self.supported_languages:
+            self._publish_tts(f"Unsupported language: {language_code}")
+            return
+
+        self.current_lang = language_code
+        try:
+            with open(self.state_path, 'w') as f:
+                yaml.dump({"language": language_code}, f)
+        except Exception as e:
+            self.get_logger().error(f"Failed to save language state: {e}")
+
+    def _control_state(self, action):
+        action_text = str(action or "").strip().lower()
+        if action_text in {"on", "turn_on", "turn on"}:
+            return 1
+        if action_text in {"off", "turn_off", "turn off"}:
+            return 0
+        try:
+            return int(action_text)
+        except ValueError:
+            return None
+
+    def handle_control(self, ctrl):
+        target = ctrl.get('target')
+        action = ctrl.get('action')
+        room = ctrl.get('room', '')
+
+        if str(target or "").strip().lower() == 'language':
+            self._set_language(str(action or "").strip())
+            return
+
+        state = self._control_state(action)
+        if state is None:
+            self._publish_tts(f"I do not know how to set {target} to {action}.")
+            return
+
+        home_context = self._load_home_context()
+        device, error = resolve_device(home_context["devices"], target, room)
+        if error:
+            self.get_logger().error(f"❌ Smart home target error: {error}")
+            self._publish_tts(f"I could not control {target}: {error}.")
+            return
+
+        if not self.control_device_client.wait_for_service(timeout_sec=2.0):
+            self.get_logger().error("❌ Service /smarthome/controlDevice not available!")
+            self._publish_tts("The smart home control service is not available.")
+            return
+
+        req = ControlDevice.Request()
+        req.id = device["id"]
+        req.state = state
+        future = self.control_device_client.call_async(req)
+        self.get_logger().info(
+            f"🏠 Controlling {device['name']} ({device['id']}) in "
+            f"{device['room_name']}: state={state}"
+        )
+
+        def control_done_callback(fut):
             try:
-                with open(rooms_yaml, 'r', encoding='utf-8') as f:
-                    rooms_data = yaml.safe_load(f) or {}
-                
-                # Check for "House" key just like room_manager_node
-                if isinstance(rooms_data.get("House"), dict):
-                    rooms_data = rooms_data["House"]
-                
-                if isinstance(rooms_data, dict):
-                    for room_name, room_info in rooms_data.items():
-                        if not isinstance(room_info, dict):
-                            continue
-                        coords = room_info.get("coordinates", {})
-                        pose = coords.get("pose", {})
-                        
-                        x = float(pose.get("x", 0.0))
-                        y = float(pose.get("y", 0.0))
-                        z = float(pose.get("z", 0.0))
-                        
-                        self.room_coordinates[room_name] = {"x": x, "y": y, "z": z}
-                        
-                        # Add alias mappings for backwards compatibility
-                        if room_name == "living_room":
-                            self.room_coordinates["living"] = {"x": x, "y": y, "z": z}
-                        elif room_name == "living":
-                            self.room_coordinates["living_room"] = {"x": x, "y": y, "z": z}
-                self.get_logger().info(f"Loaded coordinates from rooms.yaml: {list(self.room_coordinates.keys())}")
-            except Exception as e:
-                self.get_logger().error(f"Error loading rooms.yaml: {e}")
+                res = fut.result()
+                if res.success:
+                    self.get_logger().info(
+                        f"✅ Smart home control succeeded for {device['name']}"
+                    )
+                else:
+                    self.get_logger().error(
+                        f"❌ Smart home control failed for {device['name']}"
+                    )
+                    self._publish_tts(f"I could not control {device['name']}.")
+            except Exception as ex:
+                self.get_logger().error(f"❌ Smart home service call failed: {ex}")
+                self._publish_tts(f"I could not control {device['name']}.")
+
+        future.add_done_callback(control_done_callback)
     
     def voice_callback(self, msg):
         self.get_logger().info(f"🎤 [Command Received]: {msg.data}")
@@ -213,27 +292,16 @@ class LLMCommander(Node):
 
         base_prompt_template = self.prompts.get("system_prompt", "")
         lang_name = self.language_map.get(self.current_lang, "Arabic")
-        
-        # Load available rooms dynamically from rooms.yaml
-        rooms_list = ["kitchen", "living_room"] # fallback defaults
-        rooms_yaml = self._resolve_rooms_yaml_path()
-        if rooms_yaml and os.path.exists(rooms_yaml):
-            try:
-                with open(rooms_yaml, 'r', encoding='utf-8') as f:
-                    rooms_data = yaml.safe_load(f) or {}
-                if isinstance(rooms_data.get("House"), dict):
-                    rooms_data = rooms_data["House"]
-                if isinstance(rooms_data, dict):
-                    parsed_rooms = list(rooms_data.keys())
-                    if parsed_rooms:
-                        rooms_list = parsed_rooms
-            except Exception as e:
-                self.get_logger().error(f"Error loading rooms.yaml: {e}")
+        home_context = self._load_home_context()
 
-        rooms_str = json.dumps(rooms_list, ensure_ascii=False)
-
-        # Replace the placeholders {LANGUAGE_NAME}, {LANGUAGE_CODE}, and {ROOMS_LIST}
-        base_prompt = base_prompt_template.replace("{LANGUAGE_NAME}", lang_name).replace("{LANGUAGE_CODE}", self.current_lang).replace("{ROOMS_LIST}", rooms_str)
+        base_prompt = (
+            base_prompt_template
+            .replace("{LANGUAGE_NAME}", lang_name)
+            .replace("{LANGUAGE_CODE}", self.current_lang)
+            .replace("{ROOMS_LIST}", home_context["rooms_prompt"])
+            .replace("{ROOMS_CONTEXT}", home_context["rooms_prompt"])
+            .replace("{DEVICES_CONTEXT}", home_context["devices_prompt"])
+        )
         
         # Reload contacts and unread telegram messages dynamically in case they updated
         try:
@@ -251,7 +319,7 @@ class LLMCommander(Node):
             except Exception:
                 pass
                 
-        dynamic_prompt = base_prompt + f"\n\nCURRENT DEVICE STATES:\n{json.dumps(self.home_state)}\n\nAVAILABLE TELEGRAM CONTACTS:\n{json.dumps(available_contacts, ensure_ascii=False)}\n\nUNREAD TELEGRAM MESSAGES:\n{json.dumps(unread_messages, ensure_ascii=False)}"
+        dynamic_prompt = base_prompt + f"\n\nAVAILABLE TELEGRAM CONTACTS:\n{json.dumps(available_contacts, ensure_ascii=False)}\n\nUNREAD TELEGRAM MESSAGES:\n{json.dumps(unread_messages, ensure_ascii=False)}"
         
         self.chat_history.append({"role": "user", "content": command_text})
         
@@ -325,11 +393,12 @@ class LLMCommander(Node):
             except Exception as e:
                 self.get_logger().warn(f"Failed to parse LLM json for state updates: {e}")
 
-            # Extract json context again for routing actuators
+            # Extract json context for routing actuators
             try:
                 json_string = self.extract_json(raw_output)
                 data = json.loads(json_string)
-            except Exception:
+            except Exception as e:
+                self.get_logger().warn(f"Failed to parse LLM json: {e}")
                 data = {}
             
             # --- READ INBOX LOGIC ---
@@ -513,9 +582,9 @@ class LLMCommander(Node):
             # --- NAVIGATION LOGIC ---
             if data.get('navigate_to'):
                 target_room = data['navigate_to']
-                # Reload dynamic rooms config to pick up runtime updates instantly
-                self.load_rooms_config()
-                coords = self.room_coordinates.get(target_room, {"x": 0.0, "y": 0.0, "z": 0.0})
+                home_context = self._load_home_context()
+                room = self._find_room(home_context["rooms"], target_room)
+                coords = room["pose"] if room else {"x": 0.0, "y": 0.0, "theta": 0.0}
                 nav_payload = {"intent": "navigate", "target": target_room, "action": "goto", "point": coords}
                 msg = String()
                 msg.data = json.dumps(nav_payload, ensure_ascii=False)
@@ -525,7 +594,7 @@ class LLMCommander(Node):
                 # Call rooms/navigate service to actually command the robot via Nav2
                 if self.nav_client.wait_for_service(timeout_sec=2.0):
                     req = NavigateToRoom.Request()
-                    req.room_name = target_room
+                    req.id = target_room
                     self.get_logger().info(f"🚀 Requesting navigation to room: {target_room} via rooms/navigate service")
                     future = self.nav_client.call_async(req)
                     
@@ -555,19 +624,12 @@ class LLMCommander(Node):
                 controls_list = data['controls']
                 
             if controls_list:
-                msg = String()
-                msg.data = json.dumps({"controls": controls_list}, ensure_ascii=False)
-                self.home_pub.publish(msg)
                 for ctrl in controls_list:
-                    self.get_logger().info(f"🏠 HOME Command Processed: {ctrl.get('action')} {ctrl.get('target')}")
+                    self.handle_control(ctrl)
             
             # --- SPEAK THE RESPONSE OUT LOUD ---
             if data.get('response'):
-                response_text = data['response']
-                tts_msg = String()
-                tts_msg.data = response_text
-                self.tts_pub.publish(tts_msg)
-                self.get_logger().info(f"🗣️ TTS Response Published: {response_text}")
+                self._publish_tts(data['response'])
 
         except Exception as e:
             self.get_logger().error(f"❌ Error in LLM service call response callback: {e}")
