@@ -1,0 +1,5 @@
+int64 id
+string email
+string options
+---
+TelegramDialog[] groups

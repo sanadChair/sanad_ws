@@ -68,7 +68,7 @@ class WakeupNode(Node):
 
         # Load your custom Sanad model
         oww_model = Model(
-            wakeword_models=[self.oww_model_path], inference_framework="onnx"
+            wakeword_model_paths=[self.oww_model_path]
         )
 
         FORMAT = pyaudio.paInt16

@@ -354,45 +354,6 @@ class LLMCommander(Node):
                 if msg.get("role") == "user" and isinstance(msg.get("content"), str) and msg["content"].startswith("audio://"):
                     msg["content"] = "[Voice Command]"
             
-            # Update state variables internally based on LLM output
-            try:
-                json_string = self.extract_json(raw_output)
-                data = json.loads(json_string)
-                
-                # Normalize control instructions into a list
-                controls_list = []
-                if data.get('intent') == 'control' and 'target' in data:
-                    controls_list.append({
-                        "target": data.get('target'),
-                        "action": data.get('action'),
-                        "room": data.get('room', '')
-                    })
-                elif data.get('controls'):
-                    controls_list = data['controls']
-                
-                # Update Smart Home State and Language state
-                for ctrl in controls_list:
-                    target = ctrl.get('target')
-                    action = str(ctrl.get('action'))
-                    if target == 'language':
-                        new_lang = action
-                        if new_lang in self.supported_languages:
-                            self.current_lang = new_lang
-                            try:
-                                with open(self.state_path, 'w') as f:
-                                    yaml.dump({"language": new_lang}, f)
-                            except Exception:
-                                pass
-                    elif target in self.home_state:
-                        if action in ['on', 'turn_on']:
-                            self.home_state[target] = 'on'
-                        elif action in ['off', 'turn_off']:
-                            self.home_state[target] = 'off'
-                        else:
-                            self.home_state[target] = action
-            except Exception as e:
-                self.get_logger().warn(f"Failed to parse LLM json for state updates: {e}")
-
             # Extract json context for routing actuators
             try:
                 json_string = self.extract_json(raw_output)

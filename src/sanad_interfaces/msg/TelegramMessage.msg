@@ -1,0 +1,10 @@
+int32 id
+string chat_id
+string sender_id
+int64 date
+string message
+bool out
+bool mentioned
+bool media_unread
+bool silent
+bool post

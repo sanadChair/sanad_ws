@@ -1,0 +1,8 @@
+int64 id
+string email
+string chat
+string message
+string options
+---
+bool success
+TelegramMessage message

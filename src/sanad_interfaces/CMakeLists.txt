@@ -16,6 +16,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RoomEvent.msg"
   "msg/Device.msg"
   "msg/DeviceEvent.msg"
+  "msg/TelegramDialog.msg"
+  "msg/TelegramMessage.msg"
   "srv/ControlDevice.srv"
   "srv/DeleteDevice.srv"
   "srv/DeleteRoom.srv"
@@ -33,6 +35,10 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SpeakToLLM.srv"
   "srv/CaptureAndDescribe.srv"
   "srv/LocateObject.srv"
+  "srv/GetTelegramGroups.srv"
+  "srv/GetTelegramUsers.srv"
+  "srv/GetTelegramMessages.srv"
+  "srv/SendTelegramMessage.srv"
   DEPENDENCIES std_msgs geometry_msgs
  )
 ament_export_dependencies(rosidl_default_runtime)

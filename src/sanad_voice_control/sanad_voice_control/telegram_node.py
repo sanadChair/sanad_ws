@@ -1,271 +1,434 @@
 #!/usr/bin/env python3
-import rclpy
-from rclpy.node import Node
-from std_msgs.msg import String
 import json
-import requests
-import threading
 import os
-import yaml
+import threading
 import time
 
+import rclpy
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node
+from std_msgs.msg import String
+import yaml
 
-def load_dotenv():
-    try:
-        from ament_index_python.packages import get_package_share_directory
-        share_dir = get_package_share_directory('sanad_bringup')
-        env_path = os.path.join(share_dir, '.env')
-        if os.path.exists(env_path):
-            with open(env_path, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith('#'):
-                        continue
-                    if '=' in line:
-                        k, v = line.split('=', 1)
-                        os.environ[k.strip()] = v.strip().strip('"').strip("'")
-    except Exception:
-        pass
+from sanad_interfaces.srv import (
+    GetTelegramGroups,
+    GetTelegramMessages,
+    GetTelegramUsers,
+    SendTelegramMessage,
+)
+
+
+GET_TELEGRAM_GROUPS_SERVICE = "/telegram/chat/groups"
+GET_TELEGRAM_USERS_SERVICE = "/telegram/chat/users"
+GET_TELEGRAM_MESSAGES_SERVICE = "/telegram/chat/messages"
+SEND_TELEGRAM_MESSAGE_SERVICE = "/telegram/chat/send"
+
 
 class TelegramManagerNode(Node):
     def __init__(self):
-        super().__init__('telegram_node')
-        
-        # Subscriptions
+        super().__init__("telegram_node")
+
+        self.declare_parameter("telegram_id", 0)
+        self.declare_parameter("telegram_email", "")
+        self.declare_parameter("poll_interval_sec", 30.0)
+        self.declare_parameter("service_timeout_sec", 10.0)
+        self.declare_parameter("dialogs_limit", 50)
+        self.declare_parameter("messages_limit", 20)
+
+        self.telegram_id = int(self.get_parameter("telegram_id").value)
+        self.telegram_email = self.get_parameter("telegram_email").value
+        self.poll_interval_sec = float(self.get_parameter("poll_interval_sec").value)
+        self.service_timeout_sec = float(self.get_parameter("service_timeout_sec").value)
+        self.dialogs_limit = int(self.get_parameter("dialogs_limit").value)
+        self.messages_limit = int(self.get_parameter("messages_limit").value)
+
+        self.get_groups_client = self.create_client(
+            GetTelegramGroups,
+            GET_TELEGRAM_GROUPS_SERVICE,
+        )
+        self.get_users_client = self.create_client(
+            GetTelegramUsers,
+            GET_TELEGRAM_USERS_SERVICE,
+        )
+        self.get_messages_client = self.create_client(
+            GetTelegramMessages,
+            GET_TELEGRAM_MESSAGES_SERVICE,
+        )
+        self.send_message_client = self.create_client(
+            SendTelegramMessage,
+            SEND_TELEGRAM_MESSAGE_SERVICE,
+        )
+
         self.send_sub = self.create_subscription(
             String,
-            '/robot/telegram/send',
+            "/robot/telegram/send",
             self.send_callback,
-            10
+            10,
         )
         self.clear_sub = self.create_subscription(
             String,
-            '/robot/telegram/clear',
+            "/robot/telegram/clear",
             self.clear_callback,
-            10
+            10,
         )
-        
-        # Paths for config files
+
         try:
             from ament_index_python.packages import get_package_share_directory
-            share_dir = get_package_share_directory('sanad_voice_control')
-            self.telegram_contacts_path = os.path.join(share_dir, 'config', 'telegram_contacts.yaml')
-            self.telegram_messages_path = os.path.join(share_dir, 'config', 'telegram_messages.yaml')
+
+            share_dir = get_package_share_directory("sanad_voice_control")
+            self.telegram_contacts_path = os.path.join(
+                share_dir, "config", "telegram_contacts.yaml"
+            )
+            self.telegram_messages_path = os.path.join(
+                share_dir, "config", "telegram_messages.yaml"
+            )
         except Exception:
-            self.telegram_contacts_path = 'config/telegram_contacts.yaml'
-            self.telegram_messages_path = 'config/telegram_messages.yaml'
-        
-        # Ensure files exist
+            self.telegram_contacts_path = "config/telegram_contacts.yaml"
+            self.telegram_messages_path = "config/telegram_messages.yaml"
+
         os.makedirs(os.path.dirname(self.telegram_messages_path), exist_ok=True)
         if not os.path.exists(self.telegram_messages_path):
-            with open(self.telegram_messages_path, 'w', encoding='utf-8') as f:
-                yaml.dump([], f)
-                
-        # Load Telegram Contacts
-        try:
-            with open(self.telegram_contacts_path, 'r', encoding='utf-8') as file:
-                self.telegram_contacts = yaml.safe_load(file) or {}
-        except FileNotFoundError:
-            self.get_logger().warning("telegram_contacts.yaml not found! Contacts won't load.")
-            self.telegram_contacts = {}
+            self._write_yaml(self.telegram_messages_path, [])
+        if not os.path.exists(self.telegram_contacts_path):
+            self._write_yaml(self.telegram_contacts_path, {})
 
-        # Load Telegram Token (from environment/.env)
-        load_dotenv()
-        self.telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN", None)
-            
-        # --- START TELEGRAM LISTENER THREAD ---
-        self.telegram_offset = 0
-        if self.telegram_token:
-            self.get_logger().info("📡 Starting Telegram polling thread (Inbox Mode)...")
-            self.telegram_thread = threading.Thread(target=self.telegram_polling_loop, daemon=True)
-            self.telegram_thread.start()
-        else:
-            self.get_logger().error("Telegram token missing. Polling thread not started.")
-            
-        self.get_logger().info("✅ Telegram Node Ready!")
+        self.file_lock = threading.Lock()
+        self.service_lock = threading.Lock()
+        self.seen_message_ids = {}
+        self.dialog_names = {}
+        self.reported_missing_services = set()
+        self.reported_empty_dialogs = False
+        self.stop_event = threading.Event()
+
+        self.telegram_thread = threading.Thread(
+            target=self.telegram_polling_loop,
+            daemon=True,
+        )
+        self.telegram_thread.start()
+
+        self.get_logger().info(
+            "Telegram node ready. Using client services: "
+            f"groups={GET_TELEGRAM_GROUPS_SERVICE}, users={GET_TELEGRAM_USERS_SERVICE}, "
+            f"messages={GET_TELEGRAM_MESSAGES_SERVICE}, send={SEND_TELEGRAM_MESSAGE_SERVICE}"
+        )
+        self.get_logger().info(
+            f"Telegram polling thread started. poll_interval={self.poll_interval_sec:.1f}s, "
+            f"service_timeout={self.service_timeout_sec:.1f}s"
+        )
+
+    def _read_yaml(self, path, fallback):
+        try:
+            with open(path, "r", encoding="utf-8") as file:
+                return yaml.safe_load(file) or fallback
+        except Exception:
+            return fallback
+
+    def _write_yaml(self, path, data):
+        with open(path, "w", encoding="utf-8") as file:
+            yaml.dump(data, file, allow_unicode=True)
+
+    def _call_service(self, client, request, service_name, timeout_sec=10.0):
+        with self.service_lock:
+            if not client.wait_for_service(timeout_sec=timeout_sec):
+                if service_name not in self.reported_missing_services:
+                    self.reported_missing_services.add(service_name)
+                    self.get_logger().warning(
+                        f"Telegram: service '{service_name}' is not available after {timeout_sec:.1f}s."
+                    )
+                return None
+
+            done = threading.Event()
+            result = {"response": None, "error": None}
+            future = client.call_async(request)
+
+            def on_done(fut):
+                try:
+                    result["response"] = fut.result()
+                except Exception as exc:
+                    result["error"] = exc
+                finally:
+                    done.set()
+
+            future.add_done_callback(on_done)
+            if not done.wait(timeout_sec):
+                self.get_logger().warning(
+                    f"Telegram: service '{service_name}' did not respond within {timeout_sec:.1f}s."
+                )
+                return None
+            if result["error"]:
+                raise result["error"]
+            return result["response"]
+
+    def _dialog_name(self, dialog):
+        return (dialog.name or dialog.title or dialog.id).strip()
+
+    def _load_contacts(self):
+        contacts = self._read_yaml(self.telegram_contacts_path, {})
+        return contacts if isinstance(contacts, dict) else {}
+
+    def _save_messages(self, sender_name, messages):
+        if not messages:
+            return
+
+        with self.file_lock:
+            unread_msgs = self._read_yaml(self.telegram_messages_path, [])
+            if not isinstance(unread_msgs, list):
+                unread_msgs = []
+
+            grouped = {}
+            for entry in unread_msgs:
+                if not isinstance(entry, dict):
+                    continue
+                if "sender" in entry and "message" in entry:
+                    user = entry["sender"]
+                    grouped.setdefault(user, []).append({"message": entry["message"]})
+                elif "user" in entry and "messages" in entry:
+                    user = entry["user"]
+                    existing = entry["messages"] if isinstance(entry["messages"], list) else []
+                    grouped.setdefault(user, []).extend(existing)
+
+            grouped.setdefault(sender_name, [])
+            for message in messages:
+                grouped[sender_name].append({"message": message.message})
+
+            self._write_yaml(
+                self.telegram_messages_path,
+                [{"user": user, "messages": items} for user, items in grouped.items()],
+            )
+
+    def _sync_dialogs(self):
+        options = json.dumps(
+            {
+                "limit": self.dialogs_limit,
+                "offsetDate": 0,
+                "offsetId": 0,
+                "ignorePinned": False,
+                "ignoreMigrated": False,
+                "folder": 0,
+                "archived": False,
+            }
+        )
+
+        groups_req = GetTelegramGroups.Request()
+        groups_req.id = self.telegram_id
+        groups_req.email = self.telegram_email
+        groups_req.options = options
+
+        users_req = GetTelegramUsers.Request()
+        users_req.id = self.telegram_id
+        users_req.email = self.telegram_email
+        users_req.options = options
+
+        groups_res = self._call_service(
+            self.get_groups_client,
+            groups_req,
+            GET_TELEGRAM_GROUPS_SERVICE,
+            self.service_timeout_sec,
+        )
+        users_res = self._call_service(
+            self.get_users_client,
+            users_req,
+            GET_TELEGRAM_USERS_SERVICE,
+            self.service_timeout_sec,
+        )
+        dialogs = []
+        if groups_res:
+            dialogs.extend(groups_res.groups)
+        if users_res:
+            dialogs.extend(users_res.users)
+
+        if not dialogs and not self.reported_empty_dialogs:
+            self.reported_empty_dialogs = True
+            self.get_logger().warning(
+                "Telegram client returned no dialogs. Check telegram_id/email and the client session."
+            )
+
+        contacts = self._load_contacts()
+        updated_contacts = dict(contacts)
+        for dialog in dialogs:
+            name = self._dialog_name(dialog)
+            if not name:
+                continue
+            self.dialog_names[dialog.id] = name
+            updated_contacts.setdefault(name.lower(), dialog.id)
+
+        if updated_contacts != contacts:
+            with self.file_lock:
+                self._write_yaml(self.telegram_contacts_path, updated_contacts)
+
+        return dialogs
+
+    def _fetch_messages(self, dialog):
+        req = GetTelegramMessages.Request()
+        req.id = self.telegram_id
+        req.email = self.telegram_email
+        req.chat = dialog.id
+        req.options = json.dumps(
+            {
+                "limit": self.messages_limit,
+                "offsetId": 0,
+                "minId": 0,
+                "maxId": 0,
+                "addOffset": 0,
+                "search": "",
+                "reverse": False,
+            }
+        )
+
+        res = self._call_service(
+            self.get_messages_client,
+            req,
+            GET_TELEGRAM_MESSAGES_SERVICE,
+            self.service_timeout_sec,
+        )
+        if not res:
+            return []
+        return sorted(res.messages, key=lambda item: item.id)
 
     def telegram_polling_loop(self):
-        """Checks for new messages and SAVES them to a YAML file."""
-        allowed_chat_ids = [str(v) for v in self.telegram_contacts.values()]
-        
-        while rclpy.ok():
-            url = f"https://api.telegram.org/bot{self.telegram_token}/getUpdates"
-            params = {"offset": self.telegram_offset, "timeout": 30}
-            
+        while rclpy.ok() and not self.stop_event.is_set():
             try:
-                response = requests.get(url, params=params, timeout=40)
-                if response.status_code == 200:
-                    data = response.json()
-                    for update in data.get("result", []):
-                        self.telegram_offset = update["update_id"] + 1
-                        
-                        message = update.get("message", {})
-                        text = message.get("text", "")
-                        chat_id = str(message.get("chat", {}).get("id", ""))
-                        
-                        if text:
-                            if chat_id in allowed_chat_ids:
-                                # Reverse lookup to find sender's name
-                                sender_name = "Unknown"
-                                for name, cid in self.telegram_contacts.items():
-                                    if str(cid) == chat_id:
-                                        sender_name = name
-                                        break
-                                        
-                                self.get_logger().info(f"📩 [New Inbox Message from {sender_name}]: {text}")
-                                
-                                # Save the message to our unread YAML file
-                                try:
-                                    unread_msgs = []
-                                    if os.path.exists(self.telegram_messages_path):
-                                        with open(self.telegram_messages_path, 'r', encoding='utf-8') as f:
-                                            unread_msgs = yaml.safe_load(f) or []
-                                            
-                                    if not isinstance(unread_msgs, list):
-                                        unread_msgs = []
+                dialogs = self._sync_dialogs()
+                for dialog in dialogs:
+                    if dialog.unread_count <= 0:
+                        continue
 
-                                    # Migrate existing old format messages on-the-fly
-                                    user_map = {}
-                                    for entry in unread_msgs:
-                                        if not isinstance(entry, dict):
-                                            continue
-                                        if "sender" in entry and "message" in entry:
-                                            sender = entry["sender"]
-                                            msg_text = entry["message"]
-                                            if sender not in user_map:
-                                                user_map[sender] = []
-                                            user_map[sender].append({"message": msg_text})
-                                        elif "user" in entry and "messages" in entry:
-                                            user = entry["user"]
-                                            msgs = entry["messages"]
-                                            if not isinstance(msgs, list):
-                                                msgs = []
-                                            if user not in user_map:
-                                                user_map[user] = []
-                                            user_map[user].extend(msgs)
-                                    
-                                    # Group/add new message
-                                    if sender_name not in user_map:
-                                        user_map[sender_name] = []
-                                    user_map[sender_name].append({"message": text})
+                    dialog_name = self.dialog_names.get(dialog.id, self._dialog_name(dialog))
+                    messages = self._fetch_messages(dialog)
+                    if not messages:
+                        continue
 
-                                    # Rebuild unread list grouped by user
-                                    unread_msgs = [{"user": u, "messages": m} for u, m in user_map.items()]
-                                    
-                                    with open(self.telegram_messages_path, 'w', encoding='utf-8') as f:
-                                        yaml.dump(unread_msgs, f, allow_unicode=True)
-                                except Exception as e:
-                                    self.get_logger().error(f"Error saving telegram message: {e}")
-                            else:
-                                self.get_logger().warning(f"⚠️ [Unauthorized Telegram user]: ChatID {chat_id} said: '{text}'")
-            except requests.exceptions.Timeout:
-                pass 
-            except Exception as e:
-                self.get_logger().error(f"Telegram polling error: {e}")
-                time.sleep(5)
+                    last_seen = self.seen_message_ids.get(dialog.id)
+                    latest_id = max(message.id for message in messages)
+                    if last_seen is None:
+                        self.seen_message_ids[dialog.id] = latest_id
+                        if dialog.unread_count <= 0:
+                            continue
+                        threshold = latest_id - dialog.unread_count
+                        new_messages = [
+                            message
+                            for message in messages
+                            if not message.out and message.message and message.id > threshold
+                        ]
+                    else:
+                        new_messages = [
+                            message
+                            for message in messages
+                            if not message.out and message.message and message.id > last_seen
+                        ]
+                        self.seen_message_ids[dialog.id] = latest_id
 
-    def send_telegram_message(self, chat_id, text):
-        if not self.telegram_token:
-            self.get_logger().error("Telegram Bot Token is missing from config!")
-            return False
-            
-        url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
-        payload = {"chat_id": chat_id, "text": text}
-        try:
-            response = requests.post(url, json=payload)
-            return response.status_code == 200
-        except Exception as e:
-            self.get_logger().error(f"Failed to send telegram message: {e}")
-            return False
+                    if new_messages:
+                        self._save_messages(dialog_name, new_messages)
+                        self.get_logger().info(
+                            f"Telegram inbox: saved {len(new_messages)} new message(s) from {dialog_name}"
+                        )
+            except Exception as exc:
+                self.get_logger().error(f"Telegram polling error: {exc}")
+
+            self.stop_event.wait(self.poll_interval_sec)
 
     def send_callback(self, msg):
-        """Processes sending telegram messages requested via the send topic."""
         try:
             data = json.loads(msg.data)
-            contact_name = data.get('contact', '').lower()
-            message_text = data.get('message', '')
-            
-            # Reload contacts config in case it changed dynamically
-            try:
-                with open(self.telegram_contacts_path, 'r', encoding='utf-8') as file:
-                    self.telegram_contacts = yaml.safe_load(file) or {}
-            except Exception:
-                pass
+            contact_name = data.get("contact", "").strip().lower()
+            message_text = data.get("message", "")
+            options = data.get("options", {})
 
-            if contact_name in self.telegram_contacts:
-                target_chat_id = self.telegram_contacts[contact_name]
-                success = self.send_telegram_message(target_chat_id, message_text)
-                if success:
-                    self.get_logger().info(f"📱 TELEGRAM: Sent to {contact_name} -> {message_text}")
-                else:
-                    self.get_logger().error("❌ TELEGRAM Error: API request failed.")
+            contacts = self._load_contacts()
+            if contact_name not in contacts:
+                self.get_logger().error(
+                    f"TELEGRAM: contact '{contact_name}' not found in contacts YAML."
+                )
+                return
+
+            req = SendTelegramMessage.Request()
+            req.id = self.telegram_id
+            req.email = self.telegram_email
+            req.chat = str(contacts[contact_name])
+            req.message = message_text
+            req.options = json.dumps(options if isinstance(options, dict) else {})
+
+            res = self._call_service(
+                self.send_message_client,
+                req,
+                SEND_TELEGRAM_MESSAGE_SERVICE,
+                self.service_timeout_sec,
+            )
+            if res and res.success:
+                self.get_logger().info(f"TELEGRAM: sent to {contact_name}")
             else:
-                self.get_logger().error(f"❌ TELEGRAM Error: Contact '{contact_name}' not found in contacts YAML.")
-        except Exception as e:
-            self.get_logger().error(f"Error parsing telegram send payload: {e}")
+                self.get_logger().error("TELEGRAM: send service returned failure.")
+        except Exception as exc:
+            self.get_logger().error(f"Error parsing telegram send payload: {exc}")
 
     def clear_callback(self, msg):
-        """Clears the inbox YAML file based on scope."""
         try:
             data = None
             try:
                 data = json.loads(msg.data)
             except Exception:
-                # If not JSON, treat as raw command
                 pass
 
-            if data is not None and isinstance(data, dict):
-                scope = data.get("scope", "all")
-                if scope == "sender":
-                    sender_to_clear = data.get("sender", "").strip().lower()
-                    if sender_to_clear:
-                        # Filter out messages from this sender
-                        unread_msgs = []
-                        if os.path.exists(self.telegram_messages_path):
-                            with open(self.telegram_messages_path, 'r', encoding='utf-8') as f:
-                                unread_msgs = yaml.safe_load(f) or []
-                        
+            if isinstance(data, dict) and data.get("scope") == "sender":
+                sender_to_clear = data.get("sender", "").strip().lower()
+                if sender_to_clear:
+                    with self.file_lock:
+                        unread_msgs = self._read_yaml(self.telegram_messages_path, [])
                         if not isinstance(unread_msgs, list):
                             unread_msgs = []
 
-                        # Filter using the new "user" key, but also support "sender" key migration/clearing if present
                         filtered_msgs = []
-                        for m in unread_msgs:
-                            if not isinstance(m, dict):
+                        for item in unread_msgs:
+                            if not isinstance(item, dict):
                                 continue
-                            user_name = m.get("user") or m.get("sender", "")
-                            if user_name.strip().lower() != sender_to_clear:
-                                # Ensure it gets stored as the new format
-                                if "sender" in m:
-                                    filtered_msgs.append({
-                                        "user": m["sender"],
-                                        "messages": [{"message": m["message"]}]
-                                    })
-                                else:
-                                    filtered_msgs.append(m)
-                        
-                        with open(self.telegram_messages_path, 'w', encoding='utf-8') as f:
-                            yaml.dump(filtered_msgs, f, allow_unicode=True)
-                        self.get_logger().info(f"📭 Inbox messages from '{sender_to_clear}' marked as read and cleared.")
-                        return
-                
-            # Fallback: Clear everything
-            with open(self.telegram_messages_path, 'w', encoding='utf-8') as f:
-                yaml.dump([], f)
-            self.get_logger().info("📭 Entire inbox marked as read and cleared.")
-        except Exception as e:
-            self.get_logger().error(f"❌ Error clearing inbox: {e}")
+                            user_name = item.get("user") or item.get("sender", "")
+                            if user_name.strip().lower() == sender_to_clear:
+                                continue
+                            if "sender" in item and "message" in item:
+                                filtered_msgs.append(
+                                    {
+                                        "user": item["sender"],
+                                        "messages": [{"message": item["message"]}],
+                                    }
+                                )
+                            else:
+                                filtered_msgs.append(item)
+
+                        self._write_yaml(self.telegram_messages_path, filtered_msgs)
+                    self.get_logger().info(
+                        f"Telegram inbox messages from '{sender_to_clear}' cleared."
+                    )
+                    return
+
+            with self.file_lock:
+                self._write_yaml(self.telegram_messages_path, [])
+            self.get_logger().info("Telegram inbox cleared.")
+        except Exception as exc:
+            self.get_logger().error(f"Error clearing Telegram inbox: {exc}")
+
+    def destroy_node(self):
+        self.stop_event.set()
+        if self.telegram_thread.is_alive():
+            self.telegram_thread.join(timeout=2.0)
+        super().destroy_node()
+
 
 def main(args=None):
     rclpy.init(args=args)
     node = TelegramManagerNode()
+    executor = MultiThreadedExecutor(num_threads=4)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
+        executor.shutdown()
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

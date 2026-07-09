@@ -1,0 +1,6 @@
+int64 id
+string email
+string chat
+string options
+---
+TelegramMessage[] messages
