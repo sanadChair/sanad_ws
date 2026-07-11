@@ -1,0 +1,28 @@
+# =============================================================================
+#  Sanad – Python pip Dependencies
+# =============================================================================
+#  Install with:  pip install -r requirements.txt
+#
+#  NOTE: ROS 2 packages (rclpy, sensor_msgs, geometry_msgs, nav2_msgs, …)
+#        are provided by the ROS 2 distribution and must NOT be installed via
+#        pip.  Only pure-Python / PyPI libraries are listed here.
+# =============================================================================
+
+# ── Voice & Audio ────────────────────────────────────────────────────────────
+PyAudio                     # Microphone capture & audio playback
+SpeechRecognition           # Google / Vosk speech-to-text wrapper
+openwakeword                # Custom wake-word detection (ONNX models)
+piper-tts                   # Local neural TTS engine (offline Arabic voice)
+
+# ── LLM & Cloud AI ──────────────────────────────────────────────────────────
+google-genai                # Google Generative AI SDK (Gemini / Vertex AI)
+requests                    # HTTP client for local Koboldcpp / REST APIs
+
+# ── Computer Vision & Perception ─────────────────────────────────────────────
+opencv-python               # Image processing (cv2)
+numpy                       # Numerical computing
+ultralytics                 # YOLOv8/v11 object detection & ByteTrack
+torch                       # PyTorch (used by YOLO & perception nodes)
+
+# ── Utilities ────────────────────────────────────────────────────────────────
+PyYAML                      # YAML config file parsing

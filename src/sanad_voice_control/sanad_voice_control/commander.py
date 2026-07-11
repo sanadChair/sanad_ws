@@ -2,11 +2,16 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-from sanad_interfaces.srv import SpeakToLLM, NavigateToRoom
+from sanad_interfaces.srv import SpeakToLLM, NavigateToRoom, CaptureAndDescribe, LocateObject
+from geometry_msgs.msg import PoseStamped
+from nav2_msgs.action import NavigateToPose
+from rclpy.action import ActionClient
+import tf2_ros
 import json
 import re
 import os
 import yaml
+import math
 
 class LLMCommander(Node):
     def __init__(self):
@@ -30,6 +35,29 @@ class LLMCommander(Node):
             NavigateToRoom,
             'rooms/navigate'
         )
+
+        # Service Client for Vision Analysis
+        self.vision_client = self.create_client(
+            CaptureAndDescribe,
+            '/robot/capture_and_describe'
+        )
+
+        # Service Client for Dynamic Object Localization
+        self.locate_client = self.create_client(
+            LocateObject,
+            '/robot/locate_object'
+        )
+
+        # Action Client for Arbitrary Nav Goals
+        self.nav_pose_client = ActionClient(
+            self,
+            NavigateToPose,
+            'navigate_to_pose'
+        )
+
+        # TF Listener for robot localization
+        self._tf_buffer = tf2_ros.Buffer(cache_time=rclpy.duration.Duration(seconds=10.0))
+        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
         
         # Subscription to User Commands (Voice / Console)
         self.voice_sub = self.create_subscription(
@@ -87,6 +115,18 @@ class LLMCommander(Node):
         self.load_rooms_config()
 
         self.get_logger().info("✅ LLM Brain Orchestrator Node Ready! Service client connected.")
+
+    def _robot_position(self):
+        try:
+            tf = self._tf_buffer.lookup_transform(
+                'map', 'base_link',
+                rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=1.0),
+            )
+            return tf.transform.translation
+        except Exception as e:
+            self.get_logger().warn(f'TF robot position (map->base_link) failed: {e}', throttle_duration_sec=5.0)
+            return None
 
     def _resolve_config_path(self, filename):
         try:
@@ -241,6 +281,11 @@ class LLMCommander(Node):
             
             self.chat_history.append({"role": "assistant", "content": raw_output})
             
+            # Sanitize raw audio paths in chat history for future context
+            for msg in self.chat_history:
+                if msg.get("role") == "user" and isinstance(msg.get("content"), str) and msg["content"].startswith("audio://"):
+                    msg["content"] = "[Voice Command]"
+            
             # Update state variables internally based on LLM output
             try:
                 json_string = self.extract_json(raw_output)
@@ -320,6 +365,150 @@ class LLMCommander(Node):
                 else:
                     self.get_logger().error(f"❌ TELEGRAM Error: Contact '{contact_name}' not found.")
                     data['response'] = f"I cannot find a contact named {contact_name} in my database."
+
+            # --- VISION LOGIC ---
+            elif data.get('intent') == 'vision':
+                if self.vision_client.wait_for_service(timeout_sec=2.0):
+                    req = CaptureAndDescribe.Request()
+                    # Determine prompt based on active language
+                    prompts_map = {
+                        "ar": "ماذا ترى أمامك؟ صف بالتفصيل باللهجة المصرية العامية.",
+                        "en": "What do you see in front of you? Describe it in detail.",
+                        "fr": "Que vois-tu devant toi ? Décris-le en détail.",
+                        "de": "Was siehst du vor dir? Beschreibe es im Detail.",
+                        "es": "¿Qué ves delante de ti? Descríbelo en detail.",
+                        "it": "Cosa vedi davanti a te? Descrivilo in dettaglio."
+                    }
+                    req.prompt = prompts_map.get(self.current_lang, "What do you see in front of you? Describe it in detail.")
+                    
+                    self.get_logger().info(f"📸 Requesting vision analysis with prompt: {req.prompt}")
+                    future_vision = self.vision_client.call_async(req)
+                    
+                    def vision_done_callback(fut):
+                        try:
+                            res = fut.result()
+                            vision_desc = res.response
+                            self.get_logger().info(f"✅ Vision analysis complete: {vision_desc}")
+                            
+                            # Append to chat history so the assistant remembers what it saw
+                            self.chat_history.append({"role": "assistant", "content": vision_desc})
+                            
+                            # Speak the description
+                            tts_msg = String()
+                            tts_msg.data = vision_desc
+                            self.tts_pub.publish(tts_msg)
+                            self.get_logger().info(f"🗣️ Vision Response Published to TTS: {vision_desc}")
+                        except Exception as ex:
+                            self.get_logger().error(f"❌ Vision service call failed: {ex}")
+                            
+                    future_vision.add_done_callback(vision_done_callback)
+                else:
+                    self.get_logger().error("❌ Service /robot/capture_and_describe not available!")
+                    fallback_response = "Sorry, my camera service is not available."
+                    tts_msg = String()
+                    tts_msg.data = fallback_response
+                    self.tts_pub.publish(tts_msg)
+
+            # --- VISION-BASED OBJECT NAVIGATION LOGIC ---
+            elif data.get('intent') == 'navigate_to_object':
+                target_obj = data.get('object', '')
+                if not target_obj:
+                    self.get_logger().error("❌ NAV OBJECT Error: Object name is empty.")
+                else:
+                    if self.locate_client.wait_for_service(timeout_sec=2.0):
+                        req = LocateObject.Request()
+                        req.object_name = target_obj
+                        
+                        self.get_logger().info(f"🔍 Requesting location for object: {target_obj}")
+                        future_locate = self.locate_client.call_async(req)
+                        
+                        def locate_done_callback(fut):
+                            try:
+                                res = fut.result()
+                                if not res.success:
+                                    self.get_logger().error(f"❌ Failed to locate object '{target_obj}'")
+                                    error_msg = "Sorry, I couldn't find that object in my view."
+                                    if self.current_lang == "ar":
+                                        error_msg = "أنا آسف، مش شايف الحاجة دي قدامي."
+                                    tts_msg = String()
+                                    tts_msg.data = error_msg
+                                    self.tts_pub.publish(tts_msg)
+                                    return
+                                    
+                                obj_pose = res.pose
+                                self.get_logger().info(f"📍 Object located at: x={obj_pose.pose.position.x:.3f}, y={obj_pose.pose.position.y:.3f}")
+                                
+                                # Get robot current position
+                                robot_pos = self._robot_position()
+                                if robot_pos is None:
+                                    self.get_logger().error("❌ Failed to get robot position.")
+                                    return
+                                    
+                                # Compute offset goal (keep 0.8m distance)
+                                dx = obj_pose.pose.position.x - robot_pos.x
+                                dy = obj_pose.pose.position.y - robot_pos.y
+                                dist = math.hypot(dx, dy)
+                                
+                                min_dist = 0.8 # keep 0.8 meters distance
+                                
+                                if dist < min_dist:
+                                    self.get_logger().info("Already close enough to the object.")
+                                    success_msg = "I am already near the object."
+                                    if self.current_lang == "ar":
+                                        success_msg = "أنا قريب من الحاجة دي بالفعل."
+                                    tts_msg = String()
+                                    tts_msg.data = success_msg
+                                    self.tts_pub.publish(tts_msg)
+                                    return
+                                    
+                                scale = (dist - min_dist) / dist
+                                
+                                goal_pose = PoseStamped()
+                                goal_pose.header.frame_id = "map"
+                                goal_pose.header.stamp = self.get_clock().now().to_msg()
+                                goal_pose.pose.position.x = robot_pos.x + dx * scale
+                                goal_pose.pose.position.y = robot_pos.y + dy * scale
+                                goal_pose.pose.position.z = 0.0
+                                
+                                # Face the object
+                                yaw = math.atan2(dy, dx)
+                                goal_pose.pose.orientation.x = 0.0
+                                goal_pose.pose.orientation.y = 0.0
+                                goal_pose.pose.orientation.z = math.sin(yaw / 2.0)
+                                goal_pose.pose.orientation.w = math.cos(yaw / 2.0)
+                                
+                                self.get_logger().info(f"🚀 Sending Nav2 goal to Pose: x={goal_pose.pose.position.x:.3f}, y={goal_pose.pose.position.y:.3f}")
+                                
+                                # Call NavigateToPose action
+                                if self.nav_pose_client.wait_for_server(timeout_sec=5.0):
+                                    goal_msg = NavigateToPose.Goal()
+                                    goal_msg.pose = goal_pose
+                                    
+                                    send_goal_future = self.nav_pose_client.send_goal_async(goal_msg)
+                                    
+                                    def goal_response_callback(future_accepted):
+                                        goal_handle = future_accepted.result()
+                                        if not goal_handle.accepted:
+                                            self.get_logger().error("Nav2 rejected goal")
+                                            return
+                                        self.get_logger().info("Nav2 goal accepted")
+                                        
+                                    send_goal_future.add_done_callback(goal_response_callback)
+                                else:
+                                    self.get_logger().error("NavigateToPose action server not available")
+                                    
+                            except Exception as ex:
+                                self.get_logger().error(f"❌ Error during locate object callback: {ex}")
+                                
+                        future_locate.add_done_callback(locate_done_callback)
+                    else:
+                        self.get_logger().error("❌ Service /robot/locate_object not available!")
+                        fallback_response = "Sorry, my visual locator service is not available."
+                        if self.current_lang == "ar":
+                            fallback_response = "أنا آسف، خدمة تحديد المواقع البصرية مش متاحة حالياً."
+                        tts_msg = String()
+                        tts_msg.data = fallback_response
+                        self.tts_pub.publish(tts_msg)
 
             # --- NAVIGATION LOGIC ---
             if data.get('navigate_to'):
