@@ -9,34 +9,34 @@
 </p>
 
 <p align="center">
-  <a href="#-features">Features</a> •
-  <a href="#%EF%B8%8F-system-architecture">Architecture</a> •
-  <a href="#-prerequisites">Prerequisites</a> •
-  <a href="#-installation">Installation</a> •
-  <a href="#-usage">Usage</a> •
-  <a href="#-packages-overview">Packages</a> •
-  <a href="#-contributing">Contributing</a> •
-  <a href="#-license">License</a>
+  <a href="#features">Features</a> •
+  <a href="#system-architecture">Architecture</a> •
+  <a href="#prerequisites">Prerequisites</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#packages-overview">Packages</a> •
+  <a href="#contributing">Contributing</a> •
+  <a href="#license">License</a>
 </p>
 
 ---
 
-## ✨ Features
+## Features
 
-| Category | Capabilities |
-|---|---|
-| **🗣️ Voice Control** | Custom wake-word ("Sanad") detection via openWakeWord, speech-to-text (Whisper / Gemini), text-to-speech (Piper / Gemini TTS), and natural-language command understanding |
-| **🧠 AI Brain** | Gemini Vertex AI (cloud) or local Koboldcpp LLM for intent parsing, dialogue, and multi-turn conversation in Arabic & English |
-| **📷 Vision** | Real-time object detection (YOLOv8/v11 + ByteTrack), camera-based scene description (Gemini Vision), and visual object navigation |
-| **🗺️ Navigation** | Autonomous SLAM (slam_toolbox), AMCL localization, Nav2 path planning with a custom global planner, and room-based navigation |
-| **🏠 Smart Home** | Room & IoT device management, smart-home device control (lights, AC, TV, heater) per room |
-| **📱 Telegram** | Two-way Telegram bot integration — send and receive messages, read inbox via voice commands |
-| **🎮 Teleoperation** | Keyboard, PS3 controller, IMU-to-twist, and human-following control modes |
-| **🔬 Sensor Fusion** | LiDAR + RGBD depth-bias calibration and range-adaptive 2D scan fusion |
+| Category          | Capabilities                                                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Voice Control** | Custom wake-word ("Sanad") detection via openWakeWord, speech-to-text (Whisper / Gemini), text-to-speech (Piper / Gemini TTS), and natural-language command understanding |
+| **AI Brain**      | Gemini Vertex AI (cloud) or local Koboldcpp LLM for intent parsing, dialogue, and multi-turn conversation in Arabic & English                                             |
+| **Vision**        | Real-time object detection (YOLOv8/v11 + ByteTrack), camera-based scene description (Gemini Vision), and visual object navigation                                         |
+| **Navigation**    | Autonomous SLAM (slam_toolbox), AMCL localization, Nav2 path planning with a custom global planner, and room-based navigation                                             |
+| **Smart Home**    | Room & IoT device management, smart-home device control (lights, AC, TV, heater) per room                                                                                 |
+| **Telegram**      | Two-way Telegram bot integration — send and receive messages, read inbox via voice commands                                                                               |
+| **Teleoperation** | Keyboard, PS3 controller, IMU-to-twist, and human-following control modes                                                                                                 |
+| **Sensor Fusion** | LiDAR + RGBD depth-bias calibration and range-adaptive 2D scan fusion                                                                                                     |
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 <!-- TODO: Add your system architecture diagram here -->
 <!-- <p align="center">
@@ -46,14 +46,14 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        sanad_bringup                                │
-│          (Simulation / Real Robot launch orchestrator)               │
+│          (Simulation / Real Robot launch orchestrator)              │
 ├────────┬────────┬────────┬────────┬─────────┬───────────┬───────────┤
 │ sanad  │ sanad  │ sanad  │ sanad  │  sanad  │  sanad    │  sanad    │
 │ voice  │ percep │ navig  │ mappin │  local  │  room     │  control  │
 │ control│ tion   │ ation  │  g     │  izatn  │  manager  │  ler      │
 ├────────┴────────┴────────┴────────┴─────────┴───────────┴───────────┤
 │                      sanad_interfaces                               │
-│              (Custom msgs: Room, Device, TrackedPerson)              │
+│              (Custom msgs: Room, Device, TrackedPerson)             │
 │              (Custom srvs: SpeakToLLM, NavigateToRoom, …)           │
 ├─────────────────────────────────────────────────────────────────────┤
 │                      sanad_description                              │
@@ -67,17 +67,17 @@
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 ### System Requirements
 
-| Requirement | Version |
-|---|---|
-| **OS** | Ubuntu 22.04 LTS |
-| **ROS 2** | Humble Hawksbill |
-| **Gazebo** | Fortress / Garden (Ignition) |
-| **Python** | 3.10+ |
-| **CMake** | 3.8+ |
+| Requirement | Version                      |
+| ----------- | ---------------------------- |
+| **OS**      | Ubuntu 22.04 LTS             |
+| **ROS 2**   | Humble Hawksbill             |
+| **Gazebo**  | Fortress / Garden (Ignition) |
+| **Python**  | 3.10+                        |
+| **CMake**   | 3.8+                         |
 
 ### Hardware (for Real Robot)
 
@@ -89,7 +89,7 @@
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ### 1. Install ROS 2 Humble
 
@@ -135,11 +135,11 @@ source install/setup.bash
 ```
 
 > **Tip:** Auto-source the workspace for every new terminal:
+>
 > ```bash
 > echo "source ~/sanad_ws/install/setup.bash" >> ~/.bashrc
 > source ~/.bashrc
 > ```
-
 
 ### 7. Environment Configuration
 
@@ -159,17 +159,7 @@ KOBOLD_URL=http://localhost:5001/v1/chat/completions
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token-here
 ```
 
-### 8. Google Cloud / Vertex AI Setup (for Cloud Mode)
-
-If using cloud-based LLM and TTS (`use_cloud:=true`), authenticate with Google Cloud:
-
-```bash
-gcloud auth application-default login
-```
-
-Ensure the Vertex AI API is enabled on your GCP project.
-
-### 9. Whisper.cpp Setup (for Local STT Mode)
+### 8. Whisper.cpp Setup (for Local STT Mode)
 
 If using local speech-to-text (`use_cloud:=false`):
 
@@ -181,7 +171,7 @@ cmake -B build && cmake --build build --config Release
 bash ./models/download-ggml-model.sh large-v3-q5_0
 ```
 
-### 10. Camera Setup (Orbbec Astra Pro)
+### 9. Camera Setup (Orbbec Astra Pro)
 
 For detailed Orbbec Astra Pro camera setup, refer to the dedicated guide:
 
@@ -189,7 +179,7 @@ For detailed Orbbec Astra Pro camera setup, refer to the dedicated guide:
 
 ---
 
-## 🎯 Usage
+## Usage
 
 ### Simulation
 
@@ -230,9 +220,6 @@ ros2 launch sanad_room_manager room_manager.launch.py
 ### Teleoperation
 
 ```bash
-# Keyboard control (stamped)
-ros2 run teleop_twist_keyboard teleop_twist_keyboard -p stamped:=true
-
 # Keyboard control (simulation — remapped topic)
 ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args -r /cmd_vel:=/sanad_controller/cmd_vel -p stamped:=true
@@ -246,91 +233,91 @@ ros2 run sanad_voice_control console_input_node
 
 ---
 
-## 📦 Packages Overview
+## Packages Overview
 
 ### Core Packages
 
-| Package | Type | Description |
-|---|---|---|
-| [`sanad_bringup`](src/sanad_bringup/) | `ament_cmake` | Top-level launch files for simulation and real robot deployment |
-| [`sanad_description`](src/sanad_description/) | `ament_cmake` | URDF/Xacro robot model, meshes, Gazebo world files |
-| [`sanad_interfaces`](src/sanad_interfaces/) | `ament_cmake` | Custom ROS 2 message and service definitions |
+| Package                                       | Type          | Description                                                     |
+| --------------------------------------------- | ------------- | --------------------------------------------------------------- |
+| [`sanad_bringup`](src/sanad_bringup/)         | `ament_cmake` | Top-level launch files for simulation and real robot deployment |
+| [`sanad_description`](src/sanad_description/) | `ament_cmake` | URDF/Xacro robot model, meshes, Gazebo world files              |
+| [`sanad_interfaces`](src/sanad_interfaces/)   | `ament_cmake` | Custom ROS 2 message and service definitions                    |
 
 ### Intelligence & Voice
 
-| Package | Type | Description |
-|---|---|---|
+| Package                                           | Type           | Description                                                                            |
+| ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------- |
 | [`sanad_voice_control`](src/sanad_voice_control/) | `ament_python` | Full AI pipeline — wake-word, STT, LLM brain, TTS, Telegram, and command orchestration |
 
 **Nodes in `sanad_voice_control`:**
 
-| Node | Description |
-|---|---|
-| `wakeup_node` | Listens for the "Sanad" wake-word using openWakeWord, then captures audio |
-| `whisper_node` | Local speech-to-text using whisper.cpp (offline mode) |
-| `llm_node` | LLM service — routes queries to Gemini Vertex AI (cloud) or Koboldcpp (local) |
-| `commander` | Central orchestrator — parses LLM intent and dispatches navigation, smart-home, vision, and Telegram actions |
-| `tts_node` | Text-to-speech — streams audio via Gemini TTS (cloud) or Piper (local) |
-| `telegram_node` | Telegram bot — polls for incoming messages and sends outgoing messages |
-| `console_input_node` | Text-based command input for development/debugging |
+| Node                 | Description                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `wakeup_node`        | Listens for the "Sanad" wake-word using openWakeWord, then captures audio                                    |
+| `whisper_node`       | Local speech-to-text using whisper.cpp (offline mode)                                                        |
+| `llm_node`           | LLM service — routes queries to Gemini Vertex AI (cloud) or Koboldcpp (local)                                |
+| `commander`          | Central orchestrator — parses LLM intent and dispatches navigation, smart-home, vision, and Telegram actions |
+| `tts_node`           | Text-to-speech — streams audio via Gemini TTS (cloud) or Piper (local)                                       |
+| `telegram_node`      | Telegram bot — polls for incoming messages and sends outgoing messages                                       |
+| `console_input_node` | Text-based command input for development/debugging                                                           |
 
 ### Navigation & Mapping
 
-| Package | Type | Description |
-|---|---|---|
-| [`sanad_navigation`](src/sanad_navigation/) | `ament_cmake` | Nav2 configuration, behavior trees, and controller parameters |
-| [`sanad_mapping`](src/sanad_mapping/) | `ament_cmake` | SLAM Toolbox configuration and pre-built map files |
-| [`sanad_localization`](src/sanad_localization/) | `ament_cmake` | AMCL and robot_localization (EKF) configuration |
-| [`sanad_planning`](src/sanad_planning/) | `ament_cmake` | Custom Nav2 global planner plugin (C++) |
+| Package                                         | Type          | Description                                                   |
+| ----------------------------------------------- | ------------- | ------------------------------------------------------------- |
+| [`sanad_navigation`](src/sanad_navigation/)     | `ament_cmake` | Nav2 configuration, behavior trees, and controller parameters |
+| [`sanad_mapping`](src/sanad_mapping/)           | `ament_cmake` | SLAM Toolbox configuration and pre-built map files            |
+| [`sanad_localization`](src/sanad_localization/) | `ament_cmake` | AMCL and robot_localization (EKF) configuration               |
+| [`sanad_planning`](src/sanad_planning/)         | `ament_cmake` | Custom Nav2 global planner plugin (C++)                       |
 
 ### Perception
 
-| Package | Type | Description |
-|---|---|---|
+| Package                                     | Type           | Description                                                                                       |
+| ------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------- |
 | [`sanad_perception`](src/sanad_perception/) | `ament_python` | Human detection & following (YOLO + ByteTrack), LiDAR–camera sensor fusion, and depth calibration |
 
 ### Control & Smart Home
 
-| Package | Type | Description |
-|---|---|---|
-| [`sanad_controller`](src/sanad_controller/) | `ament_python` | Twist relay, noisy controller, joystick teleop, and ros2_control configuration |
-| [`sanad_room_manager`](src/sanad_room_manager/) | `ament_python` | Room CRUD management, room-based navigation service, smart-home device registry, and room location tracking |
-| [`sanad_interface_pkg`](src/sanad_interface_pkg/) | `ament_python` | Keyboard/PS3/IMU-to-twist converters and human-following teleop |
+| Package                                           | Type           | Description                                                                                                 |
+| ------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------- |
+| [`sanad_controller`](src/sanad_controller/)       | `ament_python` | Twist relay, noisy controller, joystick teleop, and ros2_control configuration                              |
+| [`sanad_room_manager`](src/sanad_room_manager/)   | `ament_python` | Room CRUD management, room-based navigation service, smart-home device registry, and room location tracking |
+| [`sanad_interface_pkg`](src/sanad_interface_pkg/) | `ament_python` | Keyboard/PS3/IMU-to-twist converters and human-following teleop                                             |
 
 ### Hardware Drivers
 
-| Package | Type | Description |
-|---|---|---|
+| Package                                       | Type          | Description                                                          |
+| --------------------------------------------- | ------------- | -------------------------------------------------------------------- |
 | [`diffdrive_arduino`](src/diffdrive_arduino/) | `ament_cmake` | ros2_control hardware interface for Arduino-based differential drive |
-| [`ldlidar_ros2_ws`](src/ldlidar_ros2_ws/) | `ament_cmake` | LDLiDAR ROS 2 driver |
+| [`ldlidar_ros2_ws`](src/ldlidar_ros2_ws/)     | `ament_cmake` | LDLiDAR ROS 2 driver                                                 |
 
 ---
 
-## 🛠️ Custom Interfaces
+## Custom Interfaces
 
 ### Messages (`sanad_interfaces/msg`)
 
-| Message | Description |
-|---|---|
-| `Room.msg` | Room data (name, coordinates, devices) |
-| `Device.msg` | IoT device descriptor (name, type, state) |
-| `TrackedPerson.msg` | Tracked person bounding box, depth, and ID |
-| `TrackedPersonArray.msg` | Array of tracked persons |
+| Message                  | Description                                |
+| ------------------------ | ------------------------------------------ |
+| `Room.msg`               | Room data (name, coordinates, devices)     |
+| `Device.msg`             | IoT device descriptor (name, type, state)  |
+| `TrackedPerson.msg`      | Tracked person bounding box, depth, and ID |
+| `TrackedPersonArray.msg` | Array of tracked persons                   |
 
 ### Services (`sanad_interfaces/srv`)
 
-| Service | Description |
-|---|---|
-| `SpeakToLLM.srv` | Send a prompt to the LLM and receive a response |
-| `NavigateToRoom.srv` | Navigate to a named room |
-| `CaptureAndDescribe.srv` | Capture a camera frame and describe it via Gemini Vision |
-| `LocateObject.srv` | Detect and localize an object in 3D (Gemini + PointCloud) |
-| `AddRoom.srv` / `GetRoom.srv` / `GetAllRooms.srv` / `UpdateRoom.srv` / `DeleteRoom.srv` | Room CRUD operations |
-| `RegisterDevice.srv` / `DeleteDevice.srv` | Smart-home device management |
+| Service                                                                                 | Description                                               |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `SpeakToLLM.srv`                                                                        | Send a prompt to the LLM and receive a response           |
+| `NavigateToRoom.srv`                                                                    | Navigate to a named room                                  |
+| `CaptureAndDescribe.srv`                                                                | Capture a camera frame and describe it via Gemini Vision  |
+| `LocateObject.srv`                                                                      | Detect and localize an object in 3D (Gemini + PointCloud) |
+| `AddRoom.srv` / `GetRoom.srv` / `GetAllRooms.srv` / `UpdateRoom.srv` / `DeleteRoom.srv` | Room CRUD operations                                      |
+| `RegisterDevice.srv` / `DeleteDevice.srv`                                               | Smart-home device management                              |
 
 ---
 
-## 🗂️ Workspace Structure
+## Workspace Structure
 
 ```
 sanad_ws/
@@ -357,9 +344,10 @@ sanad_ws/
 
 ---
 
-## 🔧 Development Notes
+## Development Notes
 
 - **Add a new ROS 2 package:**
+
   ```bash
   cd ~/sanad_ws/src
   ros2 pkg create --build-type ament_cmake <pkg_name>
@@ -368,6 +356,7 @@ sanad_ws/
   ```
 
 - **Build a single package (fast iteration):**
+
   ```bash
   colcon build --packages-select <pkg_name> --symlink-install
   ```
@@ -380,7 +369,7 @@ sanad_ws/
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature`
@@ -390,20 +379,20 @@ sanad_ws/
 
 ---
 
-## 📊 Sensor-to-Software Mapping
+## Sensor-to-Software Mapping
 
-| Sensor / Input | ROS 2 Package | Published Topics | Msg Type | Purpose |
-|---|---|---|---|---|
-| Keyboard | `sanad_interface_pkg` | `/cmd_vel` | `geometry_msgs/Twist` | Manual velocity control |
-| PS3 Controller | `sanad_interface_pkg` | `/cmd_vel` | `geometry_msgs/Twist` | Joystick teleoperation |
-| LDLiDAR (×2) | `ldlidar_ros2_ws` | `/scan`, `/scan_2` | `sensor_msgs/LaserScan` | 2D obstacle detection & SLAM |
-| Depth Camera | `astra_camera` / RealSense | `/realsense/image`, `/realsense/points` | `Image`, `PointCloud2` | Vision, depth sensing, fusion |
-| Microphone | `sanad_voice_control` | `/robot/voice_command` | `std_msgs/String` | Voice command input |
-| Telegram Bot | `sanad_voice_control` | `/robot/telegram/send` | `std_msgs/String` | Remote messaging |
+| Sensor / Input | ROS 2 Package              | Published Topics                        | Msg Type                | Purpose                       |
+| -------------- | -------------------------- | --------------------------------------- | ----------------------- | ----------------------------- |
+| Keyboard       | `sanad_interface_pkg`      | `/cmd_vel`                              | `geometry_msgs/Twist`   | Manual velocity control       |
+| PS3 Controller | `sanad_interface_pkg`      | `/cmd_vel`                              | `geometry_msgs/Twist`   | Joystick teleoperation        |
+| LDLiDAR (×2)   | `ldlidar_ros2_ws`          | `/scan`, `/scan_2`                      | `sensor_msgs/LaserScan` | 2D obstacle detection & SLAM  |
+| Depth Camera   | `astra_camera` / RealSense | `/realsense/image`, `/realsense/points` | `Image`, `PointCloud2`  | Vision, depth sensing, fusion |
+| Microphone     | `sanad_voice_control`      | `/robot/voice_command`                  | `std_msgs/String`       | Voice command input           |
+| Telegram Bot   | `sanad_voice_control`      | `/robot/telegram/send`                  | `std_msgs/String`       | Remote messaging              |
 
 ---
 
-## 📜 License
+## License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
@@ -414,5 +403,5 @@ Copyright © 2026 **SANAD TEAM**
 <p align="center">
   <img src="docs/images/sanad_logo.png" alt="Sanad Logo" width="100"/>
   <br/>
-  <strong>Built with ❤️ by the Sanad Team</strong>
+  <strong>Built by the Sanad Team</strong>
 </p>
