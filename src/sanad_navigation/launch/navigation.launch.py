@@ -137,14 +137,6 @@ def generate_launch_description():
         ],
     )
 
-    slam_mapping = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("sanad_mapping"),
-            "launch",
-            "slam.launch.py",
-        ),
-    )
-
     dual_laser_merger_node = Node(
         package="dual_laser_merger",
         executable="dual_laser_merger_node",  # may be "merger_node" depending on build
@@ -166,7 +158,6 @@ def generate_launch_description():
             nav2_bt_navigator,
             nav2_behavior,
             nav2_lifecycle_manager,
-            slam_mapping,
             laser_left_filter,
             laser_right_filter,
             dual_laser_merger_node,
