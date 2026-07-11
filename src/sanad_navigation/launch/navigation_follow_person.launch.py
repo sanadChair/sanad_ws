@@ -36,7 +36,7 @@ from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 
 
@@ -152,7 +152,13 @@ def generate_launch_description():
         package="laser_filters",
         executable="scan_to_scan_filter_chain",
         parameters=[
-            PathJoinSubstitution([sanad_navigation_pkg, "config", "laser_left_filter.yaml"])
+            PathJoinSubstitution([
+                sanad_navigation_pkg,
+                "config",
+                PythonExpression([
+                    "'laser_left_filter_sim.yaml' if '", use_sim_time, "'.lower() == 'true' else 'laser_left_filter.yaml'"
+                ])
+            ])
         ],
         remappings=[
             ("scan",          "/scan_left"),
@@ -164,7 +170,13 @@ def generate_launch_description():
         package="laser_filters",
         executable="scan_to_scan_filter_chain",
         parameters=[
-            PathJoinSubstitution([sanad_navigation_pkg, "config", "laser_right_filter.yaml"])
+            PathJoinSubstitution([
+                sanad_navigation_pkg,
+                "config",
+                PythonExpression([
+                    "'laser_right_filter_sim.yaml' if '", use_sim_time, "'.lower() == 'true' else 'laser_right_filter.yaml'"
+                ])
+            ])
         ],
         remappings=[
             ("scan",          "/scan_right"),

@@ -4,7 +4,7 @@ from ament_index_python.packages import get_package_share_directory
 import launch_ros.actions
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 
 
@@ -109,7 +109,9 @@ def generate_launch_description():
                 [
                     get_package_share_directory("sanad_navigation"),
                     "config",
-                    "laser_left_filter.yaml",
+                    PythonExpression([
+                        "'laser_left_filter_sim.yaml' if '", use_sim_time, "'.lower() == 'true' else 'laser_left_filter.yaml'"
+                    ]),
                 ]
             )
         ],
@@ -127,7 +129,9 @@ def generate_launch_description():
                 [
                     get_package_share_directory("sanad_navigation"),
                     "config",
-                    "laser_right_filter.yaml",
+                    PythonExpression([
+                        "'laser_right_filter_sim.yaml' if '", use_sim_time, "'.lower() == 'true' else 'laser_right_filter.yaml'"
+                    ]),
                 ]
             )
         ],
