@@ -43,26 +43,55 @@
   <img src="docs/images/architecture.png" alt="System Architecture" width="800"/>
 </p> -->
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        sanad_bringup                                │
-│          (Simulation / Real Robot launch orchestrator)              │
-├────────┬────────┬────────┬────────┬─────────┬───────────┬───────────┤
-│ sanad  │ sanad  │ sanad  │ sanad  │  sanad  │  sanad    │  sanad    │
-│ voice  │ percep │ navig  │ mappin │  local  │  room     │  control  │
-│ control│ tion   │ ation  │  g     │  izatn  │  manager  │  ler      │
-├────────┴────────┴────────┴────────┴─────────┴───────────┴───────────┤
-│                      sanad_interfaces                               │
-│              (Custom msgs: Room, Device, TrackedPerson)             │
-│              (Custom srvs: SpeakToLLM, NavigateToRoom, …)           │
-├─────────────────────────────────────────────────────────────────────┤
-│                      sanad_description                              │
-│                (URDF / Xacro, meshes, Gazebo worlds)                │
-├─────────────┬───────────────────────────────────────────────────────┤
-│ diffdrive   │         ldlidar_ros2_ws                               │
-│ _arduino    │      (LDLiDAR ROS 2 driver)                           │
-│ (hw iface)  │                                                       │
-└─────────────┴───────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+
+    Launch["sanad_bringup"]
+
+    subgraph Software
+        direction TB
+
+        subgraph Core
+            direction LR
+            Voice["Voice Control"]
+            Perception["Perception"]
+            Navigation["Navigation"]
+            Mapping["Mapping"]
+            Localization["Localization"]
+            Room["Room Manager"]
+            Controller["Controller"]
+        end
+
+        Interfaces["sanad_interfaces<br/>Msgs / Srvs / Actions"]
+
+        Description["sanad_description<br/>Robot Model"]
+    end
+
+    subgraph Drivers
+        direction LR
+        Diff["diffdrive_arduino"]
+        Lidar["ldlidar_ros2_ws"]
+    end
+
+    Launch --> Voice
+    Launch --> Perception
+    Launch --> Navigation
+    Launch --> Mapping
+    Launch --> Localization
+    Launch --> Room
+    Launch --> Controller
+
+    Voice --> Interfaces
+    Perception --> Interfaces
+    Navigation --> Interfaces
+    Mapping --> Interfaces
+    Localization --> Interfaces
+    Room --> Interfaces
+    Controller --> Interfaces
+
+    Interfaces --> Description
+    Description --> Diff
+    Description --> Lidar
 ```
 
 ---
@@ -159,19 +188,19 @@ KOBOLD_URL=http://localhost:5001/v1/chat/completions
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token-here
 ```
 
-### 8. Whisper.cpp Setup (for Local STT Mode)
+### 8. Google Cloud / Vertex AI Setup (for Cloud AI Mode)
 
-If using local speech-to-text (`use_cloud:=false`):
+If you plan to use Gemini Vertex AI for LLM or TTS, follow the dedicated guide:
 
-```bash
-cd ~
-git clone https://github.com/ggerganov/whisper.cpp.git
-cd whisper.cpp
-cmake -B build && cmake --build build --config Release
-bash ./models/download-ggml-model.sh large-v3-q5_0
-```
+📄 **[`google_cloud_setup.md`](google_cloud_setup.md)**
 
-### 9. Camera Setup (Orbbec Astra Pro)
+### 9. Whisper.cpp Setup (for Local STT Mode)
+
+If you plan to use local speech-to-text (`use_cloud:=false`), follow the dedicated guide:
+
+📄 **[`whisper_setup.md`](whisper_setup.md)**
+
+### 10. Camera Setup (Orbbec Astra Pro)
 
 For detailed Orbbec Astra Pro camera setup, refer to the dedicated guide:
 
@@ -338,6 +367,8 @@ sanad_ws/
 │   └── ldlidar_ros2_ws/          # LDLiDAR driver
 ├── requirements.txt              # Python pip dependencies
 ├── astra_pro_setup_guide.md      # Orbbec camera setup guide
+├── google_cloud_setup.md         # Vertex AI / Gemini cloud setup
+├── whisper_setup.md              # whisper.cpp local STT setup
 ├── LICENSE                       # MIT License
 └── README.md
 ```
@@ -403,5 +434,5 @@ Copyright © 2026 **SANAD TEAM**
 <p align="center">
   <img src="docs/images/sanad_logo.png" alt="Sanad Logo" width="100"/>
   <br/>
-  <strong>Built by the Sanad Team</strong>
+  <strong>Built with ❤️ by Sanad Team</strong>
 </p>
