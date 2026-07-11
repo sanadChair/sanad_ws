@@ -50,11 +50,9 @@ class TelegramManagerNode(Node):
             from ament_index_python.packages import get_package_share_directory
             share_dir = get_package_share_directory('sanad_voice_control')
             self.telegram_contacts_path = os.path.join(share_dir, 'config', 'telegram_contacts.yaml')
-            self.telegram_config_path = os.path.join(share_dir, 'config', 'telegram_config.yaml')
             self.telegram_messages_path = os.path.join(share_dir, 'config', 'telegram_messages.yaml')
         except Exception:
             self.telegram_contacts_path = 'config/telegram_contacts.yaml'
-            self.telegram_config_path = 'config/telegram_config.yaml'
             self.telegram_messages_path = 'config/telegram_messages.yaml'
         
         # Ensure files exist
@@ -71,18 +69,9 @@ class TelegramManagerNode(Node):
             self.get_logger().warning("telegram_contacts.yaml not found! Contacts won't load.")
             self.telegram_contacts = {}
 
-        # Load Telegram Token (prioritize environment/.env)
+        # Load Telegram Token (from environment/.env)
         load_dotenv()
         self.telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN", None)
-        
-        if not self.telegram_token:
-            try:
-                with open(self.telegram_config_path, 'r', encoding='utf-8') as file:
-                    t_config = yaml.safe_load(file) or {}
-                    self.telegram_token = t_config.get('telegram_token', None)
-            except FileNotFoundError:
-                self.get_logger().warning("telegram_config.yaml not found! Telegram won't work.")
-                self.telegram_token = None
             
         # --- START TELEGRAM LISTENER THREAD ---
         self.telegram_offset = 0
