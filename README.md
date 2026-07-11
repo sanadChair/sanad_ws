@@ -9,14 +9,27 @@
 </p>
 
 <p align="center">
+  <strong>Alexandria University - EEP Graduation Project 2026</strong>
+</p>
+
+<p align="center">
   <a href="#features">Features</a> •
-  <a href="#system-architecture">Architecture</a> •
   <a href="#prerequisites">Prerequisites</a> •
   <a href="#installation">Installation</a> •
   <a href="#usage">Usage</a> •
   <a href="#packages-overview">Packages</a> •
+  <a href="#custom-interfaces">Interfaces</a> •
+  <a href="#workspace-structure">Structure</a> •
+  <a href="#sensor-to-software-mapping">Sensor Map</a> •
   <a href="#contributing">Contributing</a> •
+  <a href="#acknowledgments">Acknowledgments</a> •
   <a href="#license">License</a>
+</p>
+
+<p align="center">
+  <img src="docs/images/sanad_robot.png" alt="Sanad Robot" width="800"/>
+  <br/>
+  <em>Sanad Robot</em>
 </p>
 
 ---
@@ -33,66 +46,6 @@
 | **Telegram**      | Two-way Telegram bot integration — send and receive messages, read inbox via voice commands                                                                               |
 | **Teleoperation** | Keyboard, PS3 controller, IMU-to-twist, and human-following control modes                                                                                                 |
 | **Sensor Fusion** | LiDAR + RGBD depth-bias calibration and range-adaptive 2D scan fusion                                                                                                     |
-
----
-
-## System Architecture
-
-<!-- TODO: Add your system architecture diagram here -->
-<!-- <p align="center">
-  <img src="docs/images/architecture.png" alt="System Architecture" width="800"/>
-</p> -->
-
-```mermaid
-flowchart TB
-
-    Launch["sanad_bringup"]
-
-    subgraph Software
-        direction TB
-
-        subgraph Core
-            direction LR
-            Voice["Voice Control"]
-            Perception["Perception"]
-            Navigation["Navigation"]
-            Mapping["Mapping"]
-            Localization["Localization"]
-            Room["Room Manager"]
-            Controller["Controller"]
-        end
-
-        Interfaces["sanad_interfaces<br/>Msgs / Srvs / Actions"]
-
-        Description["sanad_description<br/>Robot Model"]
-    end
-
-    subgraph Drivers
-        direction LR
-        Diff["diffdrive_arduino"]
-        Lidar["ldlidar_ros2_ws"]
-    end
-
-    Launch --> Voice
-    Launch --> Perception
-    Launch --> Navigation
-    Launch --> Mapping
-    Launch --> Localization
-    Launch --> Room
-    Launch --> Controller
-
-    Voice --> Interfaces
-    Perception --> Interfaces
-    Navigation --> Interfaces
-    Mapping --> Interfaces
-    Localization --> Interfaces
-    Room --> Interfaces
-    Controller --> Interfaces
-
-    Interfaces --> Description
-    Description --> Diff
-    Description --> Lidar
-```
 
 ---
 
@@ -315,10 +268,12 @@ ros2 run sanad_voice_control console_input_node
 
 ### Hardware Drivers
 
-| Package                                       | Type          | Description                                                          |
-| --------------------------------------------- | ------------- | -------------------------------------------------------------------- |
-| [`diffdrive_arduino`](src/diffdrive_arduino/) | `ament_cmake` | ros2_control hardware interface for Arduino-based differential drive |
-| [`ldlidar_ros2_ws`](src/ldlidar_ros2_ws/)     | `ament_cmake` | LDLiDAR ROS 2 driver                                                 |
+| Package                                       | Type          | Description                                                                                                                                                    |
+| --------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`diffdrive_arduino`](src/diffdrive_arduino/) | `ament_cmake` | ros2_control hardware interface for Arduino-based differential drive (actuator output)                                                                         |
+| [`ldlidar_ros2_ws`](src/ldlidar_ros2_ws/)     | `ament_cmake` | LDLiDAR ROS 2 sensor driver — reads serial data, publishes `sensor_msgs/LaserScan`                                                                             |
+| [`sanad_firmware`](src/sanad_firmware/)       | `ament_cmake` | MPU-6050 IMU sensor driver over I²C, publishes `sensor_msgs/Imu` on `/imu/out`                                                                                 |
+| `astra_camera` _(external)_                   | system pkg    | Orbbec Astra Pro depth camera driver — publishes RGB image, depth image, and PointCloud2. See [`astra_pro_setup_guide.md`](astra_pro_setup_guide.md) for setup |
 
 ---
 
@@ -375,31 +330,6 @@ sanad_ws/
 
 ---
 
-## Development Notes
-
-- **Add a new ROS 2 package:**
-
-  ```bash
-  cd ~/sanad_ws/src
-  ros2 pkg create --build-type ament_cmake <pkg_name>
-  # or for Python packages:
-  ros2 pkg create --build-type ament_python <pkg_name>
-  ```
-
-- **Build a single package (fast iteration):**
-
-  ```bash
-  colcon build --packages-select <pkg_name> --symlink-install
-  ```
-
-- **Run tests:**
-  ```bash
-  colcon test --packages-select <pkg_name>
-  colcon test-result --verbose
-  ```
-
----
-
 ## Contributing
 
 1. Fork the repository
@@ -420,6 +350,23 @@ sanad_ws/
 | Depth Camera   | `astra_camera` / RealSense | `/realsense/image`, `/realsense/points` | `Image`, `PointCloud2`  | Vision, depth sensing, fusion |
 | Microphone     | `sanad_voice_control`      | `/robot/voice_command`                  | `std_msgs/String`       | Voice command input           |
 | Telegram Bot   | `sanad_voice_control`      | `/robot/telegram/send`                  | `std_msgs/String`       | Remote messaging              |
+
+---
+
+## Acknowledgments
+
+### Supervisors & Academic Support
+
+We would like to express our sincere gratitude to **Dr. Manar Abdelmaksoud** (Professor, Alexandria University) for the guidance, support, and encouragement throughout this project. Her mentorship was invaluable in shaping the direction of this work.
+
+### BumperBot — Base Robot Platform
+
+Sanad was built on top of the open-source **BumperBot** project by **Antonio Bernardi**. BumperBot served as the starting base robot — providing the ros2_control hardware interface and differential-drive foundation — on top of which we developed the entire Sanad system: autonomous navigation, AI voice control, perception, smart-home integration, and more.
+
+- [BumperBot GitHub](https://github.com/AntoBerno/bumperbot)
+- [Antonio Bernardi's ROS 2 Course](https://www.udemy.com/user/antonio-bernardi/)
+
+
 
 ---
 
