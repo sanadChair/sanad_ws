@@ -286,19 +286,36 @@
     <axis xyz="0 0 0" />
   </joint>
 
-  <joint name="laser_left_joint" type="fixed">
-    <origin xyz="0.265 ${(0.245 +0.1)} -0.2" rpy="0 0 ${3.14 + 1.57}" />
-    <parent link="base_link" />
-    <child link="laser_left_link" />
-    <axis xyz="0 0 0" />
-  </joint>
+  <xacro:if value="$(arg is_sim)">
+    <joint name="laser_left_joint" type="fixed">
+      <origin xyz="0.265 ${(0.245 +0.1)} -0.2" rpy="0 0 ${3.14 + 1.57}" />
+      <parent link="base_link" />
+      <child link="laser_left_link" />
+      <axis xyz="0 0 0" />
+    </joint>
 
-  <joint name="laser_right_joint" type="fixed">
-    <origin xyz="0.265 -${(0.245 +0.1)} -0.2" rpy="0 0 3.14" />
-    <parent link="base_link" />
-    <child link="laser_right_link" />
-    <axis xyz="0 0 0" />
-  </joint>
+    <joint name="laser_right_joint" type="fixed">
+      <origin xyz="0.265 -${(0.245 +0.1)} -0.2" rpy="0 0 3.14" />
+      <parent link="base_link" />
+      <child link="laser_right_link" />
+      <axis xyz="0 0 0" />
+    </joint>
+  </xacro:if>
+  <xacro:unless value="$(arg is_sim)">
+    <joint name="laser_left_joint" type="fixed">
+      <origin xyz="0.265 ${(0.245 +0.035)} -0.2" rpy="0 0 1.57" />
+      <parent link="base_link" />
+      <child link="laser_left_link" />
+      <axis xyz="0 0 0" />
+    </joint>
+
+    <joint name="laser_right_joint" type="fixed">
+      <origin xyz="0.265 -${(0.245 +0.035)} -0.2" rpy="0 0 1.57" />
+      <parent link="base_link" />
+      <child link="laser_right_link" />
+      <axis xyz="0 0 0" />
+    </joint>
+  </xacro:unless>
 
   <material name="blue">
     <color rgba="0 0 1 1"/>

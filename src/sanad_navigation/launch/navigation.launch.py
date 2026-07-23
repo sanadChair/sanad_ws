@@ -1,10 +1,10 @@
 import os
 
 from ament_index_python.packages import get_package_share_directory
-
+import launch_ros.actions
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 
 
@@ -109,7 +109,9 @@ def generate_launch_description():
                 [
                     get_package_share_directory("sanad_navigation"),
                     "config",
-                    "laser_left_filter.yaml",
+                    PythonExpression([
+                        "'laser_left_filter_sim.yaml' if '", use_sim_time, "'.lower() == 'true' else 'laser_left_filter.yaml'"
+                    ]),
                 ]
             )
         ],
@@ -127,7 +129,9 @@ def generate_launch_description():
                 [
                     get_package_share_directory("sanad_navigation"),
                     "config",
-                    "laser_right_filter.yaml",
+                    PythonExpression([
+                        "'laser_right_filter_sim.yaml' if '", use_sim_time, "'.lower() == 'true' else 'laser_right_filter.yaml'"
+                    ]),
                 ]
             )
         ],
@@ -135,14 +139,6 @@ def generate_launch_description():
             ("scan", "/scan_right"),  # input
             ("scan_filtered", "/scan_right_filtered"),  # output
         ],
-    )
-
-    slam_mapping = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("sanad_mapping"),
-            "launch",
-            "slam.launch.py",
-        ),
     )
 
     dual_laser_merger_node = Node(
@@ -155,6 +151,8 @@ def generate_launch_description():
             {"use_sim_time": use_sim_time},
         ],
     )
+
+
     return LaunchDescription(
         [
             use_sim_time_arg,
@@ -164,7 +162,6 @@ def generate_launch_description():
             nav2_bt_navigator,
             nav2_behavior,
             nav2_lifecycle_manager,
-            # slam_mapping,
             laser_left_filter,
             laser_right_filter,
             dual_laser_merger_node,
