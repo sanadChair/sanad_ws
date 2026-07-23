@@ -76,7 +76,7 @@ def generate_launch_description():
         os.path.join(
             get_package_share_directory("sanad_navigation"),
             "launch",
-            "navigation.launch.py",
+            "navigation_follow_person.launch.py",
         ),
         condition=IfCondition(use_human),
     )

@@ -265,9 +265,19 @@ class LLMServiceNode(Node):
             )
             
             # Setup system instruction depending on prompt language
-            system_instruction = "You are a helpful smart home robot. Describe what you see in the image clearly and concisely."
-            if "شايف" in prompt or "ماذا" in prompt or "شوف" in prompt:
-                system_instruction = "أنت مساعد ذكي بيتكلم باللهجة المصرية العامية فقط. صف ما تراه في الصورة بشكل طبيعي ومختصر وكأنك واحد من مصر."
+            is_arabic = any('\u0600' <= char <= '\u06ff' for char in prompt)
+            if is_arabic:
+                system_instruction = (
+                    "أنت مساعد ذكي بيتكلم باللهجة المصرية العامية فقط. أجب عن سؤال المستخدم مباشرة وبإيجاز بناءً على الصورة. "
+                    "إذا طلب المستخدم وصفاً عاماً أو ماذا ترى، فصف ما تراه في الصورة بشكل طبيعي ومختصر وكأنك واحد من مصر."
+                )
+            else:
+                system_instruction = (
+                    "You are a helpful smart home robot. Answer the user's question directly and concisely "
+                    "based on the image. Respond in the same language as the user's question. If the user asks "
+                    "a general question about what you see or to describe the scene, describe what you see in "
+                    "the image clearly and concisely."
+                )
 
             config_opts = types.GenerateContentConfig(system_instruction=system_instruction)
             

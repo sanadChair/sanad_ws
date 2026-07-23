@@ -85,6 +85,7 @@ def generate_launch_description():
             ("~/robot_description", "/robot_description"),
             ("/diff_drive_controller/cmd_vel", "/cmd_vel"),
         ],
+        condition=UnlessCondition(use_sim_time),
     )
     joint_state_broadcaster_spawner = Node(
         package="controller_manager",
@@ -136,12 +137,12 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            control_node,
             use_sim_time_arg,
             wheel_radius_arg,
             wheel_separation_arg,
             wheel_radius_error_arg,
             wheel_separation_error_arg,
+            control_node,
             joint_state_broadcaster_spawner,
             wheel_controller_spawner,
             # noisy_controller_launch,
