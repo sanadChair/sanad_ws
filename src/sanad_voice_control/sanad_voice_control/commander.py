@@ -370,18 +370,25 @@ class LLMCommander(Node):
             elif data.get('intent') == 'vision':
                 if self.vision_client.wait_for_service(timeout_sec=2.0):
                     req = CaptureAndDescribe.Request()
-                    # Determine prompt based on active language
-                    prompts_map = {
-                        "ar": "ماذا ترى أمامك؟ صف بالتفصيل باللهجة المصرية العامية.",
-                        "en": "What do you see in front of you? Describe it in detail.",
-                        "fr": "Que vois-tu devant toi ? Décris-le en détail.",
-                        "de": "Was siehst du vor dir? Beschreibe es im Detail.",
-                        "es": "¿Qué ves delante de ti? Descríbelo en detail.",
-                        "it": "Cosa vedi davanti a te? Descrivilo in dettaglio."
-                    }
-                    req.prompt = prompts_map.get(self.current_lang, "What do you see in front of you? Describe it in detail.")
                     
-                    self.get_logger().info(f"📸 Requesting vision analysis with prompt: {req.prompt}")
+                    # Extract the question parsed by the LLM
+                    user_question = data.get('question')
+                    if user_question:
+                        req.prompt = user_question
+                        self.get_logger().info(f"📸 Specific vision question extracted: {req.prompt}")
+                    else:
+                        # Fallback to active language generic prompts
+                        prompts_map = {
+                            "ar": "ماذا ترى أمامك؟ صف بالتفصيل باللهجة المصرية العامية.",
+                            "en": "What do you see in front of you? Describe it in detail.",
+                            "fr": "Que vois-tu devant toi ? Décris-le en détail.",
+                            "de": "Was siehst du vor dir? Beschreibe es im Detail.",
+                            "es": "¿Qué ves delante de ti? Descríbelo en detail.",
+                            "it": "Cosa vedi davanti a te? Descrivilo in dettaglio."
+                        }
+                        req.prompt = prompts_map.get(self.current_lang, "What do you see in front of you? Describe it in detail.")
+                        self.get_logger().info(f"📸 Generic vision request prompt: {req.prompt}")
+                    
                     future_vision = self.vision_client.call_async(req)
                     
                     def vision_done_callback(fut):

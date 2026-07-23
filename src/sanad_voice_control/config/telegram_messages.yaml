@@ -1,14 +1,11 @@
-- user: mohamed
-  messages:
-    - message: "اهلا"
-    - message: "عامل ايه؟"
-
-- user: sara
-  messages:
-    - message: "مرحبا"
-    - message: "هل يمكنك مساعدتي؟"
-    - message: "شكراً"
-
-- user: ahmed
-  messages:
-    - message: "Hello"
+- messages:
+  - message: مرحبا
+  - message: هل يمكنك مساعدتي؟
+  - message: شكراً
+  user: sara
+- messages:
+  - message: Hello
+  user: ahmed
+- messages:
+  - message: hello sanad how are you
+  user: mohamed
