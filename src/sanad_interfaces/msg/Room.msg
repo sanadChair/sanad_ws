@@ -1,4 +1,5 @@
-string room_name
+string id
+string name
 float64 min_x
 float64 max_x
 float64 min_y

@@ -1,4 +1,4 @@
 sanad_interfaces/Device device
-string room_name
+string room_id
 ---
 bool success

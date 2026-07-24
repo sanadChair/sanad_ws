@@ -41,6 +41,22 @@ class RoomNavNode(Node):
         self.get_logger().info("Room Nav Node has been started.")
 
     def _resolve_rooms_yaml_path(self):
+        env_yaml_path = os.environ.get("SANAD_ROOMS_YAML_PATH")
+        if env_yaml_path:
+            return os.path.abspath(env_yaml_path)
+
+        workspace_yaml_path = os.path.abspath(
+            os.path.join(
+                os.getcwd(),
+                "src",
+                "sanad_room_manager",
+                "config",
+                "rooms.yaml",
+            )
+        )
+        if os.path.isfile(workspace_yaml_path):
+            return workspace_yaml_path
+
         source_yaml_path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "config", "rooms.yaml")
         )
@@ -72,7 +88,8 @@ class RoomNavNode(Node):
         pose = coordinates.get("pose", {})
 
         room = Room()
-        room.room_name = room_name
+        room.id = str(room_entry.get("id", ""))
+        room.name = str(room_entry.get("name") or room_name)
         room.min_x = float(coordinates.get("min_x", 0.0))
         room.max_x = float(coordinates.get("max_x", 0.0))
         room.min_y = float(coordinates.get("min_y", 0.0))
@@ -116,17 +133,24 @@ class RoomNavNode(Node):
     def handle_navigate_to_room(
         self, request: NavigateToRoom.Request, response: NavigateToRoom.Response
     ):
-        room_name = request.room_name.strip()
-        if not room_name:
+        room_id = request.id.strip()
+        if not room_id:
             response.success = False
-            self.get_logger().warn("Navigate request rejected: empty room_name")
+            self.get_logger().warn("Navigate request rejected: empty room id")
             return response
 
-        room = self.rooms_dict.get(room_name)
+        self.rooms_dict = self._load_rooms_dict()
+        room = self.rooms_dict.get(room_id)
+        if room is None:
+            for candidate in self.rooms_dict.values():
+                if candidate.id == room_id or candidate.name == room_id:
+                    room = candidate
+                    break
+
         if room is None:
             response.success = False
             self.get_logger().warn(
-                f"Navigate request failed: room '{room_name}' not found"
+                f"Navigate request failed: room '{room_id}' not found"
             )
             return response
 
@@ -141,31 +165,31 @@ class RoomNavNode(Node):
         goal.pose = self._room_to_pose_stamped(room)
 
         self.get_logger().info(
-            f"Sending room '{room_name}' to Nav2 goal: x={room.pose_x:.2f}, y={room.pose_y:.2f}, theta={room.pose_theta:.2f}"
+            f"Sending room '{room.name or room.id}' to Nav2 goal: x={room.pose_x:.2f}, y={room.pose_y:.2f}, theta={room.pose_theta:.2f}"
         )
         send_goal_future = self.nav_client.send_goal_async(goal)
         goal_handle = self._wait_for_result(send_goal_future)
         if goal_handle is None or not goal_handle.accepted:
             response.success = False
-            self.get_logger().error(f"Nav2 rejected goal for room '{room_name}'")
+            self.get_logger().error(f"Nav2 rejected goal for room '{room.name or room.id}'")
             return response
 
         result_future = goal_handle.get_result_async()
         result = self._wait_for_result(result_future)
         if result is None:
             response.success = False
-            self.get_logger().error(f"No result returned for room '{room_name}'")
+            self.get_logger().error(f"No result returned for room '{room.name or room.id}'")
             return response
 
         if result.result and result.status == GoalStatus.STATUS_SUCCEEDED:
             self.get_logger().info(
-                f"Navigation to room '{room_name}' completed successfully"
+                f"Navigation to room '{room.name or room.id}' completed successfully"
             )
             response.success = True
             return response
 
         self.get_logger().error(
-            f"Navigation to room '{room_name}' failed with status {result.status}"
+            f"Navigation to room '{room.name or room.id}' failed with status {result.status}"
         )
         response.success = False
         return response

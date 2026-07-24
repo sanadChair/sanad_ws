@@ -1,54 +1,56 @@
 kitchen:
+  id: 0863a38d-cf97-4716-a235-901da0ef1f00
+  name: kitchen
   coordinates:
-    min_x: 4.65
-    max_x: 8.7
-    min_y: 3.1
-    max_y: -4.8
+    min_x: -2.2703407390979464
+    max_x: 4.587341771875522
+    min_y: 1.511058040918872
+    max_y: 5.421637444279205
     theta: 0.0
     pose:
-      x: 6.558255195617676
-      y: -2.977426767349243
+      x: 1.1585005163887878
+      y: 3.46634774259904
       theta: 0.0
   devices:
-    - id: kitchen_light_1
-      name: Kitchen Main Light
-      type: light
-      action: [turn_on, turn_off, set_brightness]
-      state_keys: [power, brightness]
-      state_values: [off, "70"]
-    - id: kitchen_thermostat_1
-      name: Kitchen Thermostat
-      type: thermostat
-      action: [set_temperature, turn_on, turn_off]
-      state_keys: [power, temperature]
-      state_values: [on, "24"]
-living_room:
+  - id: lights-1
+    name: light device
+    control_type: binary
+    state: 0
+    connected: false
+    created_at: '2026-05-29T21:46:03.000Z'
+    updated_at: '2026-05-29T21:46:03.000Z'
+  - id: lights-2
+    name: kitchen-lights
+    control_type: binary
+    state: 1
+    connected: false
+    created_at: '2026-05-29T21:49:19.000Z'
+    updated_at: '2026-05-29T21:49:19.000Z'
+  - id: lights-3
+    name: kitchen-lights
+    control_type: binary
+    state: 1
+    connected: false
+    created_at: '2026-05-29T21:54:32.000Z'
+    updated_at: '2026-05-29T21:55:18.000Z'
+sleep room:
+  id: 0863a38d-cf97-4716-a235-901da0ef1f10
+  name: sleep room
   coordinates:
-    min_x: 4.66
-    max_x: -2.37
-    min_y: 5.5
-    max_y: -5.3
+    min_x: -2.2703407390979464
+    max_x: 4.587341771875522
+    min_y: 1.511058040918872
+    max_y: 5.421637444279205
     theta: 0.0
     pose:
-      x: 0.8284147381782532
-      y: -0.6738091707229614
+      x: 1.1585005163887878
+      y: 3.46634774259904
       theta: 0.0
   devices:
-    - id: living_room_light_1
-      name: Living Room Light
-      type: light
-      action: [turn_on, turn_off, set_brightness]
-      state_keys: [power, brightness]
-      state_values: [on, "60"]
-    - id: living_room_ac_1
-      name: Living Room AC
-      type: air_conditioner
-      action: [turn_on, turn_off, set_temperature, set_mode]
-      state_keys: [power, temperature, mode]
-      state_values: [off, "22", cool]
-    - id: living_room_tv_1
-      name: Living Room TV
-      type: tv
-      action: [turn_on, turn_off, set_channel, set_volume]
-      state_keys: [power, channel, volume]
-      state_values: [off, "5", "15"]
+  - id: relay-1
+    name: light device
+    control_type: binary
+    state: 0
+    connected: false
+    created_at: '2026-05-29T21:51:35.000Z'
+    updated_at: '2026-05-29T21:51:35.000Z'
