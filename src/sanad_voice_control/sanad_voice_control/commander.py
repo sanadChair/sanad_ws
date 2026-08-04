@@ -2,7 +2,17 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-from sanad_interfaces.srv import SpeakToLLM, NavigateToRoom, CaptureAndDescribe, LocateObject
+from sanad_interfaces.msg import Spot
+from sanad_interfaces.srv import (
+    SpeakToLLM,
+    NavigateToRoom,
+    CaptureAndDescribe,
+    LocateObject,
+    AddSpot,
+    DeleteSpot,
+    GetAllSpots,
+    NavigateToSpot,
+)
 from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
@@ -34,6 +44,24 @@ class LLMCommander(Node):
         self.nav_client = self.create_client(
             NavigateToRoom,
             'rooms/navigate'
+        )
+
+        # Service Clients for Spot CRUD and Navigation
+        self.add_spot_client = self.create_client(
+            AddSpot,
+            'spots/add'
+        )
+        self.delete_spot_client = self.create_client(
+            DeleteSpot,
+            'spots/delete'
+        )
+        self.get_all_spots_client = self.create_client(
+            GetAllSpots,
+            'spots/get_all'
+        )
+        self.nav_spot_client = self.create_client(
+            NavigateToSpot,
+            'spots/navigate'
         )
 
         # Service Client for Vision Analysis
@@ -111,10 +139,48 @@ class LLMCommander(Node):
         except FileNotFoundError:
             self.telegram_contacts = {}
 
-        # Load dynamic room coordinates
+        # Load dynamic room and spot coordinates
         self.load_rooms_config()
+        self.load_spots_config()
 
         self.get_logger().info("✅ LLM Brain Orchestrator Node Ready! Service client connected.")
+
+    def _translate_to_english(self, text):
+        if not text:
+            return ""
+        # A dictionary mapping common Arabic room and spot names to English translations
+        translation_map = {
+            "مطبخ": "kitchen",
+            "المطبخ": "kitchen",
+            "مكتب": "desk",
+            "المكتب": "desk",
+            "سرير": "bed",
+            "السرير": "bed",
+            "غرفة": "room",
+            "الغرفة": "room",
+            "صالون": "salon",
+            "الصالون": "salon",
+            "معيشة": "living room",
+            "المعيشة": "living room",
+            "حمام": "bathroom",
+            "الحمام": "bathroom",
+            "كرسي": "chair",
+            "الكرسي": "chair",
+            "كنبة": "sofa",
+            "الكنبة": "sofa",
+            "باب": "door",
+            "الباب": "door",
+            "ممر": "corridor",
+            "الممر": "corridor",
+            "شاحن": "charger",
+            "الشاحن": "charger",
+            "تلفزيون": "tv",
+            "التلفزيون": "tv",
+            "مكاني المفضل": "my favorite spot",
+            "مكان الذكريات": "memories spot",
+        }
+        cleaned = text.strip().lower()
+        return translation_map.get(cleaned, cleaned)
 
     def _robot_position(self):
         try:
@@ -126,6 +192,26 @@ class LLMCommander(Node):
             return tf.transform.translation
         except Exception as e:
             self.get_logger().warn(f'TF robot position (map->base_link) failed: {e}', throttle_duration_sec=5.0)
+            return None
+
+    def _robot_pose(self):
+        try:
+            tf = self._tf_buffer.lookup_transform(
+                'map', 'base_link',
+                rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=1.0),
+            )
+            tx = tf.transform.translation.x
+            ty = tf.transform.translation.y
+            tz = tf.transform.translation.z
+            qx = tf.transform.rotation.x
+            qy = tf.transform.rotation.y
+            qz = tf.transform.rotation.z
+            qw = tf.transform.rotation.w
+            yaw = math.atan2(2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz))
+            return tx, ty, tz, yaw
+        except Exception as e:
+            self.get_logger().warn(f'TF robot pose (map->base_link) failed: {e}', throttle_duration_sec=5.0)
             return None
 
     def _resolve_config_path(self, filename):
@@ -150,6 +236,17 @@ class LLMCommander(Node):
         except Exception:
             pass
 
+        return None
+
+    def _resolve_spots_yaml_path(self):
+        try:
+            from ament_index_python.packages import get_package_share_directory
+            share_dir = get_package_share_directory('sanad_room_manager')
+            share_yaml = os.path.join(share_dir, 'config', 'spots.yaml')
+            if os.path.isfile(share_yaml):
+                return share_yaml
+        except Exception:
+            pass
         return None
 
     def load_rooms_config(self):
@@ -194,6 +291,30 @@ class LLMCommander(Node):
                 self.get_logger().info(f"Loaded coordinates from rooms.yaml: {list(self.room_coordinates.keys())}")
             except Exception as e:
                 self.get_logger().error(f"Error loading rooms.yaml: {e}")
+
+    def load_spots_config(self):
+        if not hasattr(self, 'spot_coordinates'):
+            self.spot_coordinates = {}
+
+        spots_yaml = self._resolve_spots_yaml_path()
+        if spots_yaml and os.path.exists(spots_yaml):
+            try:
+                with open(spots_yaml, 'r', encoding='utf-8') as f:
+                    spots_data = yaml.safe_load(f) or {}
+                if isinstance(spots_data, dict):
+                    self.spot_coordinates = {}
+                    for spot_name, spot_info in spots_data.items():
+                        if not isinstance(spot_info, dict):
+                            continue
+                        pose = spot_info.get("pose", {})
+                        x = float(pose.get("x", 0.0))
+                        y = float(pose.get("y", 0.0))
+                        z = float(pose.get("z", 0.0))
+                        theta = float(pose.get("theta", 0.0))
+                        self.spot_coordinates[spot_name] = {"x": x, "y": y, "z": z, "theta": theta}
+                self.get_logger().info(f"Loaded spot coordinates from spots.yaml: {list(self.spot_coordinates.keys())}")
+            except Exception as e:
+                self.get_logger().error(f"Error loading spots.yaml: {e}")
     
     def voice_callback(self, msg):
         self.get_logger().info(f"🎤 [Command Received]: {msg.data}")
@@ -232,8 +353,28 @@ class LLMCommander(Node):
 
         rooms_str = json.dumps(rooms_list, ensure_ascii=False)
 
-        # Replace the placeholders {LANGUAGE_NAME}, {LANGUAGE_CODE}, and {ROOMS_LIST}
-        base_prompt = base_prompt_template.replace("{LANGUAGE_NAME}", lang_name).replace("{LANGUAGE_CODE}", self.current_lang).replace("{ROOMS_LIST}", rooms_str)
+        # Load available spots dynamically from spots.yaml
+        spots_list = []
+        spots_yaml = self._resolve_spots_yaml_path()
+        if spots_yaml and os.path.exists(spots_yaml):
+            try:
+                with open(spots_yaml, 'r', encoding='utf-8') as f:
+                    spots_data = yaml.safe_load(f) or {}
+                if isinstance(spots_data, dict):
+                    spots_list = list(spots_data.keys())
+            except Exception as e:
+                self.get_logger().error(f"Error loading spots.yaml: {e}")
+
+        spots_str = json.dumps(spots_list, ensure_ascii=False)
+
+        # Replace the placeholders {LANGUAGE_NAME}, {LANGUAGE_CODE}, {ROOMS_LIST}, and {SPOTS_LIST}
+        base_prompt = (
+            base_prompt_template
+            .replace("{LANGUAGE_NAME}", lang_name)
+            .replace("{LANGUAGE_CODE}", self.current_lang)
+            .replace("{ROOMS_LIST}", rooms_str)
+            .replace("{SPOTS_LIST}", spots_str)
+        )
         
         # Reload contacts and unread telegram messages dynamically in case they updated
         try:
@@ -517,38 +658,128 @@ class LLMCommander(Node):
                         tts_msg.data = fallback_response
                         self.tts_pub.publish(tts_msg)
 
+            # --- SAVE SPOT LOGIC ---
+            if data.get('intent') == 'save_spot':
+                spot_name = self._translate_to_english(data.get('spot_name', '')).strip()
+                if not spot_name:
+                    self.get_logger().error("❌ SAVE SPOT Error: spot_name is empty.")
+                else:
+                    pose_data = self._robot_pose()
+                    if pose_data is None:
+                        self.get_logger().error("❌ SAVE SPOT Error: Could not get robot TF pose.")
+                        err_msg = "Sorry, I couldn't determine my current location from TF."
+                        if self.current_lang == "ar":
+                            err_msg = "مش عارف أحدد موقعي الحالي من النظام."
+                        tts_msg = String()
+                        tts_msg.data = err_msg
+                        self.tts_pub.publish(tts_msg)
+                    else:
+                        tx, ty, tz, yaw = pose_data
+                        if self.add_spot_client.wait_for_service(timeout_sec=2.0):
+                            req = AddSpot.Request()
+                            spot_msg = Spot()
+                            spot_msg.title = spot_name
+                            spot_msg.pose_x = float(tx)
+                            spot_msg.pose_y = float(ty)
+                            spot_msg.pose_z = float(tz)
+                            spot_msg.pose_theta = float(yaw)
+                            req.spot = spot_msg
+
+                            self.get_logger().info(f"💾 Saving spot '{spot_name}' at x={tx:.2f}, y={ty:.2f}, theta={yaw:.2f} via spots/add service")
+                            future_add = self.add_spot_client.call_async(req)
+
+                            def add_done_cb(fut):
+                                try:
+                                    res = fut.result()
+                                    if res.success:
+                                        self.get_logger().info(f"✅ Spot '{spot_name}' saved successfully.")
+                                    else:
+                                        self.get_logger().error(f"❌ Failed to save spot '{spot_name}': {res.message}")
+                                except Exception as ex:
+                                    self.get_logger().error(f"❌ AddSpot service call failed: {ex}")
+                            future_add.add_done_callback(add_done_cb)
+                        else:
+                            self.get_logger().error("❌ Service spots/add not available!")
+
+            # --- REMOVE SPOT LOGIC ---
+            elif data.get('intent') == 'remove_spot':
+                spot_name = self._translate_to_english(data.get('spot_name', '')).strip()
+                if not spot_name:
+                    self.get_logger().error("❌ REMOVE SPOT Error: spot_name is empty.")
+                else:
+                    if self.delete_spot_client.wait_for_service(timeout_sec=2.0):
+                        req = DeleteSpot.Request()
+                        req.title = spot_name
+                        self.get_logger().info(f"🗑️ Deleting spot '{spot_name}' via spots/delete service")
+                        future_del = self.delete_spot_client.call_async(req)
+
+                        def del_done_cb(fut):
+                            try:
+                                res = fut.result()
+                                if res.success:
+                                    self.get_logger().info(f"✅ Spot '{spot_name}' deleted successfully.")
+                                else:
+                                    self.get_logger().error(f"❌ Failed to delete spot '{spot_name}': {res.message}")
+                            except Exception as ex:
+                                self.get_logger().error(f"❌ DeleteSpot service call failed: {ex}")
+                        future_del.add_done_callback(del_done_cb)
+                    else:
+                        self.get_logger().error("❌ Service spots/delete not available!")
+
             # --- NAVIGATION LOGIC ---
             if data.get('navigate_to'):
-                target_room = data['navigate_to']
-                # Reload dynamic rooms config to pick up runtime updates instantly
+                target = self._translate_to_english(data['navigate_to']).strip()
                 self.load_rooms_config()
-                coords = self.room_coordinates.get(target_room, {"x": 0.0, "y": 0.0, "z": 0.0})
-                nav_payload = {"intent": "navigate", "target": target_room, "action": "goto", "point": coords}
-                msg = String()
-                msg.data = json.dumps(nav_payload, ensure_ascii=False)
-                self.nav_pub.publish(msg)
-                self.get_logger().info(f"🚀 NAV Command Published: {target_room}")
+                self.load_spots_config()
 
-                # Call rooms/navigate service to actually command the robot via Nav2
-                if self.nav_client.wait_for_service(timeout_sec=2.0):
-                    req = NavigateToRoom.Request()
-                    req.room_name = target_room
-                    self.get_logger().info(f"🚀 Requesting navigation to room: {target_room} via rooms/navigate service")
-                    future = self.nav_client.call_async(req)
-                    
-                    def nav_done_callback(fut):
-                        try:
-                            res = fut.result()
-                            if res.success:
-                                self.get_logger().info(f"✅ Navigation to {target_room} succeeded.")
-                            else:
-                                self.get_logger().error(f"❌ Navigation to {target_room} failed.")
-                        except Exception as ex:
-                            self.get_logger().error(f"❌ Navigation service call failed: {ex}")
-                            
-                    future.add_done_callback(nav_done_callback)
+                # Check if target matches a saved spot (case-insensitive)
+                spot_match = None
+                for name, spot_coords in self.spot_coordinates.items():
+                    if name.lower().strip() == target.lower():
+                        spot_match = (name, spot_coords)
+                        break
+
+                if spot_match:
+                    spot_name, coords = spot_match
+                    self.get_logger().info(f"🚀 Target '{target}' matches saved spot '{spot_name}': x={coords['x']:.2f}, y={coords['y']:.2f}, theta={coords['theta']:.2f}")
+
+                    # 1. Dispatch via spots/navigate service
+                    if self.nav_spot_client.wait_for_service(timeout_sec=1.0):
+                        req_spot = NavigateToSpot.Request()
+                        req_spot.title = spot_name
+                        self.nav_spot_client.call_async(req_spot)
+
+                    # 2. Also send NavigateToPose action goal directly to Nav2 for guaranteed execution
+                    if self.nav_pose_client.wait_for_server(timeout_sec=2.0):
+                        goal_pose = PoseStamped()
+                        goal_pose.header.frame_id = "map"
+                        goal_pose.header.stamp = self.get_clock().now().to_msg()
+                        goal_pose.pose.position.x = float(coords['x'])
+                        goal_pose.pose.position.y = float(coords['y'])
+                        goal_pose.pose.position.z = float(coords.get('z', 0.0))
+
+                        half_yaw = float(coords.get('theta', 0.0)) * 0.5
+                        goal_pose.pose.orientation.z = math.sin(half_yaw)
+                        goal_pose.pose.orientation.w = math.cos(half_yaw)
+
+                        goal_msg = NavigateToPose.Goal()
+                        goal_msg.pose = goal_pose
+                        self.get_logger().info(f"🚀 Directly sending Nav2 goal for spot '{spot_name}' to pose: x={coords['x']:.2f}, y={coords['y']:.2f}")
+                        self.nav_pose_client.send_goal_async(goal_msg)
                 else:
-                    self.get_logger().error("❌ Service rooms/navigate not available!")
+                    # Fallback to room navigation
+                    coords = self.room_coordinates.get(target, {"x": 0.0, "y": 0.0, "z": 0.0})
+                    nav_payload = {"intent": "navigate", "target": target, "action": "goto", "point": coords}
+                    msg = String()
+                    msg.data = json.dumps(nav_payload, ensure_ascii=False)
+                    self.nav_pub.publish(msg)
+                    self.get_logger().info(f"🚀 NAV Command Published for room: {target}")
+
+                    if self.nav_client.wait_for_service(timeout_sec=2.0):
+                        req_room = NavigateToRoom.Request()
+                        req_room.room_name = target
+                        self.get_logger().info(f"🚀 Requesting navigation to room: '{target}' via rooms/navigate service")
+                        self.nav_client.call_async(req_room)
 
             # --- SMART HOME LOGIC ---
             controls_list = []

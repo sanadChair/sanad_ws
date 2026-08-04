@@ -16,6 +16,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Device.msg"
   "msg/TrackedPerson.msg"
   "msg/TrackedPersonArray.msg"
+  "msg/Spot.msg"
   "srv/GetRoom.srv" 
   "srv/GetAllRooms.srv"
   "srv/DeleteRoom.srv"
@@ -27,6 +28,11 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SpeakToLLM.srv"
   "srv/CaptureAndDescribe.srv"
   "srv/LocateObject.srv"
+  "srv/AddSpot.srv"
+  "srv/DeleteSpot.srv"
+  "srv/GetSpot.srv"
+  "srv/GetAllSpots.srv"
+  "srv/NavigateToSpot.srv"
   DEPENDENCIES std_msgs geometry_msgs
  )
 ament_export_dependencies(rosidl_default_runtime)

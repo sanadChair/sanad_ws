@@ -1,0 +1,4 @@
+sanad_interfaces/Spot spot
+---
+bool success
+string message

@@ -10,7 +10,7 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
-        ("share/" + package_name + "/config", ["config/rooms.yaml"]),
+        ("share/" + package_name + "/config", ["config/rooms.yaml", "config/spots.yaml"]),
         ("share/" + package_name + "/launch", glob("launch/*.launch.py")),
     ],
     install_requires=["setuptools"],
@@ -30,6 +30,7 @@ setup(
             "room_nav = sanad_room_manager.room_nav:main",
             "smart_home_device_node = sanad_room_manager.smart_home_device_node:main",
             "room_location_tracker_node = sanad_room_manager.room_location_tracker_node:main",
+            "spots_manager_node = sanad_room_manager.spots_manager_node:main",
         ],
     },
 )

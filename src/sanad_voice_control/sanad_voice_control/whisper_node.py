@@ -30,14 +30,17 @@ class BulletproofWhisperNode(Node):
             share_dir = get_package_share_directory("sanad_voice_control")
             self.state_path = os.path.join(share_dir, "config", "current_lang.yaml")
         except Exception:
-            self.state_path = os.path.expanduser(
-                "~/sanad_ws/src/sanad_voice_control/config/current_lang.yaml"
-            )
+            self.state_path = "config/current_lang.yaml"
 
-        self.whisper_bin = "/home/bod/whisper.cpp/build/bin/whisper-cli"
-        self.whisper_model = os.path.expanduser(
-            "~/whisper.cpp/models/ggml-large-v3-q5_0.bin"
+        # Declare parameters for external Whisper path configurations to avoid hardcoded absolute paths
+        self.declare_parameter("whisper_bin", "/home/bod/whisper.cpp/build/bin/whisper-cli")
+        self.declare_parameter(
+            "whisper_model",
+            os.path.expanduser("~/whisper.cpp/models/ggml-large-v3-q5_0.bin")
         )
+
+        self.whisper_bin = self.get_parameter("whisper_bin").get_parameter_value().string_value
+        self.whisper_model = self.get_parameter("whisper_model").get_parameter_value().string_value
 
         # Extended Whisper hallucinations to ignore
         self.garbage_words = [

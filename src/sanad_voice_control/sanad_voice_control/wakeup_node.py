@@ -30,13 +30,9 @@ class WakeupNode(Node):
             self.state_path = os.path.join(share_dir, "config", "current_lang.yaml")
             self.get_logger().info(f"Loaded config paths dynamically from share directory.")
         except Exception as e:
-            self.get_logger().warn(f"Failed to get package share directory: {e}. Falling back to default paths.")
-            self.oww_model_path = os.path.expanduser(
-                "~/sanad_ws/src/sanad_voice_control/models/sanad.onnx"
-            )
-            self.state_path = os.path.expanduser(
-                "~/sanad_ws/src/sanad_voice_control/config/current_lang.yaml"
-            )
+            self.get_logger().warn(f"Failed to get package share directory: {e}. Falling back to relative paths.")
+            self.oww_model_path = "models/sanad.onnx"
+            self.state_path = "config/current_lang.yaml"
 
         self.recognizer = sr.Recognizer()
         self.recognizer.energy_threshold = 3000
