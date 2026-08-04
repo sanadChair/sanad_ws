@@ -42,7 +42,7 @@ local_costmap:
       publish_frequency: 5.0
 
       # Must match global_costmap to avoid replanning thrash.
-      robot_radius: 0.2
+      robot_radius: 0.4
 
 bt_navigator:
   ros__parameters:
