@@ -45,6 +45,7 @@ def generate_launch_description():
     )
 
     gazebo_resource_path = SetEnvironmentVariable("GZ_SIM_RESOURCE_PATH", model_path)
+    ign_gazebo_resource_path = SetEnvironmentVariable("IGN_GAZEBO_RESOURCE_PATH", model_path)
 
     ros_distro = os.environ["ROS_DISTRO"]
     is_ignition = "True" if ros_distro == "humble" else "False"
@@ -102,6 +103,7 @@ def generate_launch_description():
             world_arg,
             model_arg,
             gazebo_resource_path,
+            ign_gazebo_resource_path,
             robot_state_publisher_node,
             gazebo,
             gz_spawn_entity,

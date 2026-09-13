@@ -54,6 +54,7 @@ def generate_launch_description():
             "launch",
             "global_localization.launch.py",
         ),
+        launch_arguments={"map_name": world_config}.items(),
         condition=UnlessCondition(use_slam),
     )
 
